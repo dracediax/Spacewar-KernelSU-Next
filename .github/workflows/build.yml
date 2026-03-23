@@ -152,6 +152,11 @@ jobs:
 
           echo "✅ SUSFS v2.0.0 installed"
 
+          # Fix pinctrl-utils.h include path for audio techpack
+          sed -i '/ifdef CONFIG_PINCTRL_WCD/a\\tINCS += -I$(srctree)/drivers/pinctrl' \
+            techpack/audio/soc/Kbuild
+          echo "✅ pinctrl include path fixed"
+
       # ── Build kernel ────────────────────────────────────────
       - name: Build kernel
         id: build

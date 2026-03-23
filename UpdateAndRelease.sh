@@ -180,6 +180,11 @@ cp -v "$SCRIPT_DIR/configs/susfs/include/linux/susfs_def.h" include/linux/susfs_
 
 echo "   ✅ SUSFS v2.0.0 installed."
 
+# Fix pinctrl-utils.h include path for audio techpack
+sed -i '/ifdef CONFIG_PINCTRL_WCD/a\\tINCS += -I$(srctree)/drivers/pinctrl' \
+    techpack/audio/soc/Kbuild
+echo "   ✅ pinctrl include path fixed."
+
 # ── 6. Build Kernel ─────────────────────────────────────
 echo ""
 echo "🏗️  Building kernel..."
