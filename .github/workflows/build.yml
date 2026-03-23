@@ -68,10 +68,10 @@ jobs:
           TC_DIR="$GITHUB_WORKSPACE/tc"
           CLANG_DIR="$TC_DIR/r383902b1"
           if [ ! -f "$CLANG_DIR/bin/clang" ]; then
-            echo "Cloning Clang r383902b1 from GitHub mirror..."
-            git clone --depth 1 -b clang-r383902b1 \
-              https://github.com/crdroidandroid/android_prebuilts_clang_host_linux-x86.git \
-              "$CLANG_DIR"
+            echo "Downloading Clang r383902b1..."
+            mkdir -p "$CLANG_DIR"
+            curl -L "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/android11-qpr2-release/clang-r383902b1.tar.gz" \
+              | tar -xz -C "$CLANG_DIR"
           fi
           [ -f "$CLANG_DIR/bin/clang" ] || { echo "❌ Clang setup failed"; exit 1; }
           echo "✅ Clang ready"
