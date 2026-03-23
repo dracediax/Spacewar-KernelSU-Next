@@ -180,10 +180,11 @@ cp -v "$SCRIPT_DIR/configs/susfs/include/linux/susfs_def.h" include/linux/susfs_
 
 echo "   ✅ SUSFS v2.0.0 installed."
 
-# Fix pinctrl-utils.h include path for audio techpack
-sed -i '/ifdef CONFIG_PINCTRL_WCD/a\\tINCS += -I$(srctree)/drivers/pinctrl' \
-    techpack/audio/soc/Kbuild
-echo "   ✅ pinctrl include path fixed."
+# Disable PINCTRL_WCD — it needs internal pinctrl headers not
+# available when building in-tree (designed as out-of-tree DLKM)
+sed -i 's/^#define CONFIG_PINCTRL_WCD 1/\/\/ #define CONFIG_PINCTRL_WCD 1/' \
+    techpack/audio/config/lahainaautoconf.h
+echo "   ✅ PINCTRL_WCD disabled (not buildable in-tree)."
 
 # ── 6. Build Kernel ─────────────────────────────────────
 echo ""
