@@ -15,8 +15,8 @@ Automated kernel builder for Nothing Phone (1) **Spacewar** with KernelSU-Next r
 ## Quick Start
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/KernelBuilderNothingPhone1.git
-cd KernelBuilderNothingPhone1
+git clone https://github.com/dracediax/Spacewar-KernelSU-Next.git
+cd Spacewar-KernelSU-Next
 chmod +x UpdateAndRelease.sh
 ./UpdateAndRelease.sh
 ```
