@@ -1071,6 +1071,19 @@ void susfs_add_try_umount(void __user **user_info) {
 }
 #endif
 
+/* try_umount (stub for KernelSU-Next legacy_susfs setuid_hook compat) */
+#ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT
+void susfs_try_umount(uid_t uid) {
+	SUSFS_LOGI("susfs_try_umount is not implemented in SUSFS v2.0.0\n");
+}
+#endif
+
+/* reorder_mnt_id (stub for KernelSU-Next legacy_susfs setuid_hook compat) */
+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
+void susfs_reorder_mnt_id(void) {
+}
+#endif
+
 /* susfs_init */
 void susfs_init(void) {
 #ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME
