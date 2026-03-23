@@ -182,6 +182,8 @@ echo "   ✅ SUSFS v2.0.0 installed."
 
 # Disable PINCTRL_WCD — it needs internal pinctrl headers not
 # available when building in-tree (designed as out-of-tree DLKM)
+sed -i 's/^export CONFIG_PINCTRL_WCD=m/# export CONFIG_PINCTRL_WCD=m/' \
+    techpack/audio/config/lahainaauto.conf
 sed -i 's/^#define CONFIG_PINCTRL_WCD 1/\/\/ #define CONFIG_PINCTRL_WCD 1/' \
     techpack/audio/config/lahainaautoconf.h
 echo "   ✅ PINCTRL_WCD disabled (not buildable in-tree)."
