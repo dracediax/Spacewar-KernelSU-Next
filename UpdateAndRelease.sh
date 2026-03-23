@@ -178,6 +178,10 @@ cp -v "$SCRIPT_DIR/configs/susfs/susfs.c" fs/susfs.c
 cp -v "$SCRIPT_DIR/configs/susfs/include/linux/susfs.h" include/linux/susfs.h
 cp -v "$SCRIPT_DIR/configs/susfs/include/linux/susfs_def.h" include/linux/susfs_def.h
 
+# Add susfs.o to fs/Makefile if not already present
+grep -q "susfs.o" fs/Makefile || \
+    printf '\nobj-$(CONFIG_KSU_SUSFS) += susfs.o\n' >> fs/Makefile
+
 echo "   ✅ SUSFS v2.0.0 installed."
 
 # Disable PINCTRL_WCD and PINCTRL_LPI — they need internal pinctrl

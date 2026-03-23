@@ -62,6 +62,7 @@ jobs:
           path: ~/.ccache
           key: ccache-kernel-${{ github.sha }}
           restore-keys: ccache-kernel-
+          save-always: true
 
       # ── Cache: Clang toolchain (~600MB) ────────────────────
       - name: Cache Clang toolchain
@@ -70,6 +71,7 @@ jobs:
         with:
           path: tc/r383902b1
           key: clang-r383902b1-v1
+          save-always: true
 
       - name: Download Clang toolchain
         if: steps.cache-clang.outputs.cache-hit != 'true'
@@ -87,6 +89,7 @@ jobs:
         with:
           path: android_kernel_msm-5.4_nothing_sm7325
           key: kernel-source-sm7325-v1
+          save-always: true
 
       - name: Clone kernel source
         if: steps.cache-kernel.outputs.cache-hit != 'true'
@@ -103,6 +106,7 @@ jobs:
         with:
           path: tc/Android_boot_image_editor
           key: boot-image-editor-v1
+          save-always: true
 
       - name: Clone boot image editor
         if: steps.cache-booteditor.outputs.cache-hit != 'true'
@@ -164,6 +168,10 @@ jobs:
           cp -v "$GITHUB_WORKSPACE/configs/susfs/susfs.c" fs/susfs.c
           cp -v "$GITHUB_WORKSPACE/configs/susfs/include/linux/susfs.h" include/linux/susfs.h
           cp -v "$GITHUB_WORKSPACE/configs/susfs/include/linux/susfs_def.h" include/linux/susfs_def.h
+
+          # Add susfs.o to fs/Makefile if not already present
+          grep -q "susfs.o" fs/Makefile || \
+            printf '\nobj-$(CONFIG_KSU_SUSFS) += susfs.o\n' >> fs/Makefile
 
           echo "SUSFS v2.0.0 installed"
 
