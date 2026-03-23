@@ -7,6 +7,7 @@ on:
     paths:
       - 'UpdateAndRelease.sh'
       - '.github/workflows/build.yml'
+      - 'configs/**'
 
 jobs:
   build:
@@ -54,53 +55,67 @@ jobs:
             make git patch rsync libssl-dev libelf-dev openjdk-17-jdk-headless ccache
           echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> "$GITHUB_ENV"
 
-      # ── Setup ccache ────────────────────────────────────────
-      - name: Setup ccache
+      # ── Cache: ccache ──────────────────────────────────────
+      - name: Cache ccache
         uses: actions/cache@v4
         with:
           path: ~/.ccache
           key: ccache-kernel-${{ github.sha }}
           restore-keys: ccache-kernel-
 
-      # ── Download & cache Clang toolchain ────────────────────
-      - name: Setup Clang toolchain
-        run: |
-          TC_DIR="$GITHUB_WORKSPACE/tc"
-          CLANG_DIR="$TC_DIR/r383902b1"
-          if [ ! -f "$CLANG_DIR/bin/clang" ]; then
-            echo "Downloading Clang r383902b1..."
-            mkdir -p "$CLANG_DIR"
-            curl -L "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/android11-qpr2-release/clang-r383902b1.tar.gz" \
-              | tar -xz -C "$CLANG_DIR"
-          fi
-          [ -f "$CLANG_DIR/bin/clang" ] || { echo "❌ Clang setup failed"; exit 1; }
-          echo "✅ Clang ready"
+      # ── Cache: Clang toolchain (~600MB) ────────────────────
+      - name: Cache Clang toolchain
+        id: cache-clang
+        uses: actions/cache@v4
+        with:
+          path: tc/r383902b1
+          key: clang-r383902b1-v1
 
-      # ── Setup Android boot image editor ─────────────────────
-      - name: Setup boot image editor
+      - name: Download Clang toolchain
+        if: steps.cache-clang.outputs.cache-hit != 'true'
         run: |
-          BOOT_EDITOR_DIR="$GITHUB_WORKSPACE/tc/Android_boot_image_editor"
-          if [ ! -d "$BOOT_EDITOR_DIR" ]; then
-            git clone --depth 1 https://github.com/cfig/Android_boot_image_editor.git "$BOOT_EDITOR_DIR"
-          fi
-          echo "✅ Boot image editor ready"
+          mkdir -p tc/r383902b1
+          curl -L "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/android11-qpr2-release/clang-r383902b1.tar.gz" \
+            | tar -xz -C tc/r383902b1
+          [ -f tc/r383902b1/bin/clang ] || { echo "Clang download failed"; exit 1; }
+          echo "Clang downloaded"
 
-      # ── Clone kernel source ─────────────────────────────────
+      # ── Cache: Kernel source (~1GB) ────────────────────────
+      - name: Cache kernel source
+        id: cache-kernel
+        uses: actions/cache@v4
+        with:
+          path: android_kernel_msm-5.4_nothing_sm7325
+          key: kernel-source-sm7325-v1
+
       - name: Clone kernel source
+        if: steps.cache-kernel.outputs.cache-hit != 'true'
         run: |
-          KERNEL_DIR="$GITHUB_WORKSPACE/android_kernel_msm-5.4_nothing_sm7325"
-          if [ ! -d "$KERNEL_DIR/.git" ]; then
-            git clone --depth 1 -b sm7325/v/mr \
-              https://github.com/NothingOSS/android_kernel_msm-5.4_nothing_sm7325.git "$KERNEL_DIR"
-          fi
-          echo "✅ Kernel source ready"
+          git clone --depth 1 -b sm7325/v/mr \
+            https://github.com/NothingOSS/android_kernel_msm-5.4_nothing_sm7325.git \
+            android_kernel_msm-5.4_nothing_sm7325
+          echo "Kernel source cloned"
+
+      # ── Cache: Boot image editor ───────────────────────────
+      - name: Cache boot image editor
+        id: cache-booteditor
+        uses: actions/cache@v4
+        with:
+          path: tc/Android_boot_image_editor
+          key: boot-image-editor-v1
+
+      - name: Clone boot image editor
+        if: steps.cache-booteditor.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth 1 https://github.com/cfig/Android_boot_image_editor.git \
+            tc/Android_boot_image_editor
 
       # ── Copy spacewar_defconfig into kernel tree ───────────
       - name: Copy spacewar_defconfig
         run: |
-          cp "$GITHUB_WORKSPACE/configs/spacewar_defconfig" \
-            "$GITHUB_WORKSPACE/android_kernel_msm-5.4_nothing_sm7325/arch/arm64/configs/spacewar_defconfig"
-          echo "✅ spacewar_defconfig copied"
+          cp configs/spacewar_defconfig \
+            android_kernel_msm-5.4_nothing_sm7325/arch/arm64/configs/spacewar_defconfig
+          echo "spacewar_defconfig copied"
 
       # ── Setup KernelSU-Next ─────────────────────────────────
       - name: Setup KernelSU-Next (legacy_susfs)
@@ -123,7 +138,7 @@ jobs:
           cd KernelSU-Next
           git fetch --unshallow 2>/dev/null || true
           KSU_COUNT=$(git rev-list --count HEAD)
-          echo "KSU commit count: $KSU_COUNT → KSU_VERSION=$((30000 + KSU_COUNT))"
+          echo "KSU commit count: $KSU_COUNT -> KSU_VERSION=$((30000 + KSU_COUNT))"
           cd ..
 
           # Setup driver symlink
@@ -136,7 +151,7 @@ jobs:
           sed -i 's/return check_v2_signature(path, EXPECTED_MANAGER_SIZE, EXPECTED_MANAGER_HASH);/return true;/g' \
             KernelSU-Next/kernel/apk_sign.c
 
-          echo "✅ KernelSU-Next integrated"
+          echo "KernelSU-Next integrated"
 
       # ── Setup SUSFS ─────────────────────────────────────────
       - name: Setup SUSFS
@@ -150,13 +165,13 @@ jobs:
           cp -v "$GITHUB_WORKSPACE/configs/susfs/include/linux/susfs.h" include/linux/susfs.h
           cp -v "$GITHUB_WORKSPACE/configs/susfs/include/linux/susfs_def.h" include/linux/susfs_def.h
 
-          echo "✅ SUSFS v2.0.0 installed"
+          echo "SUSFS v2.0.0 installed"
 
           # Disable PINCTRL_WCD — it needs internal pinctrl headers not
           # available when building in-tree (designed as out-of-tree DLKM)
           sed -i 's/^#define CONFIG_PINCTRL_WCD 1/\/\/ #define CONFIG_PINCTRL_WCD 1/' \
             techpack/audio/config/lahainaautoconf.h
-          echo "✅ PINCTRL_WCD disabled (not buildable in-tree)"
+          echo "PINCTRL_WCD disabled (not buildable in-tree)"
 
       # ── Build kernel ────────────────────────────────────────
       - name: Build kernel
@@ -191,7 +206,7 @@ jobs:
 
           make "${MAKE_PARAMS[@]}" spacewar_defconfig
           make -j$(nproc --all) "${MAKE_PARAMS[@]}"
-          echo "✅ Kernel build complete"
+          echo "Kernel build complete"
 
       # ── Detect OS version from stock boot tag ───────────────
       - name: Detect stock OS version
@@ -241,7 +256,7 @@ jobs:
           [ -f boot.img.signed ] && cp boot.img.signed "$OUTPUT_DIR/boot.img" \
             || cp boot.img "$OUTPUT_DIR/boot.img"
 
-          echo "✅ boot.img repacked"
+          echo "boot.img repacked"
 
       # ── Package AnyKernel3 ZIP ──────────────────────────────
       - name: Package AnyKernel3 ZIP
@@ -273,7 +288,7 @@ jobs:
           cd ..
 
           echo "zip_name=$ZIP_NAME" >> "$GITHUB_OUTPUT"
-          echo "✅ Packaged: $ZIP_NAME"
+          echo "Packaged: $ZIP_NAME"
 
       # ── Create GitHub Release ───────────────────────────────
       - name: Create Release
@@ -295,7 +310,7 @@ jobs:
             - **Kernel Manager:** Flash the `.zip` via Franco KM / SmartPack
             - **Manager APK:** Install from [rifsxd/KernelSU-Next releases](https://github.com/rifsxd/KernelSU-Next/releases)
 
-            ### ⚠️ Compatibility
+            ### Compatibility
             Only flash on devices running **NOS ${{ steps.os_version.outputs.os_version }}** (stock tag: `${{ steps.os_version.outputs.stock_tag }}`).
           files: |
             output/boot.img
