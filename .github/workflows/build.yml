@@ -68,15 +68,10 @@ jobs:
           TC_DIR="$GITHUB_WORKSPACE/tc"
           CLANG_DIR="$TC_DIR/r383902b1"
           if [ ! -f "$CLANG_DIR/bin/clang" ]; then
-            echo "Downloading Clang r383902b1..."
-            mkdir -p "$CLANG_DIR"
-            curl -L "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/master/clang-r383902b1.tar.gz" \
-              | tar -xz -C "$CLANG_DIR" 2>/dev/null || {
-              echo "Googlesource failed, trying LLVM mirror..."
-              curl -L "https://github.com/llvm/llvm-project/releases/download/llvmorg-12.0.5/clang+llvm-12.0.5-x86_64-linux-gnu-ubuntu-16.04.tar.xz" \
-                | tar -xJ -C "$TC_DIR"
-              mv "$TC_DIR"/clang+llvm-* "$CLANG_DIR" || true
-            }
+            echo "Cloning Clang r383902b1 from GitHub mirror..."
+            git clone --depth 1 -b clang-r383902b1 \
+              https://github.com/crdroidandroid/android_prebuilts_clang_host_linux-x86.git \
+              "$CLANG_DIR"
           fi
           [ -f "$CLANG_DIR/bin/clang" ] || { echo "❌ Clang setup failed"; exit 1; }
           echo "✅ Clang ready"
