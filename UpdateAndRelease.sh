@@ -81,12 +81,11 @@ fi
 echo "🔧 Checking toolchains..."
 
 if [ ! -f "$CLANG_DIR/bin/clang" ]; then
-    echo "   Cloning Clang r383902b1 from GitHub mirror..."
-    rm -rf "$CLANG_DIR"
-    git clone --depth 1 -b clang-r383902b1 \
-        https://github.com/crdroidandroid/android_prebuilts_clang_host_linux-x86.git \
-        "$CLANG_DIR"
-    [ -f "$CLANG_DIR/bin/clang" ] || die "Clang clone failed"
+    echo "   Downloading Clang r383902b1..."
+    mkdir -p "$CLANG_DIR"
+    curl -L "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/android11-qpr2-release/clang-r383902b1.tar.gz" \
+        | tar -xz -C "$CLANG_DIR"
+    [ -f "$CLANG_DIR/bin/clang" ] || die "Clang download failed"
     echo "   ✅ Clang downloaded."
 else
     echo "   ✅ Clang found."
