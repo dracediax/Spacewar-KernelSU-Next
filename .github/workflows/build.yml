@@ -1,0 +1,329 @@
+name: Build Kernel & Release
+
+on:
+  workflow_dispatch:     # Manual trigger
+  push:
+    branches: [main]
+    paths:
+      - 'UpdateAndRelease.sh'
+      - '.github/workflows/build.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write    # Needed for creating releases
+
+    steps:
+      # ── Free disk space (kernel builds need ~25GB) ──────────
+      - name: Free disk space
+        run: |
+          echo "Before cleanup:"
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android \
+            /opt/ghc /usr/local/share/boost /opt/hostedtoolcache
+          sudo apt-get clean
+          echo "After cleanup:"
+          df -h /
+
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0    # Full history for tag detection
+
+      # ── Compute next version ────────────────────────────────
+      - name: Determine version
+        id: version
+        run: |
+          # Get latest release tag (format: v1.0.X)
+          LATEST=$(git tag -l 'v1.0.*' --sort=-v:refname | head -1)
+          if [ -z "$LATEST" ]; then
+            NEXT="v1.0.0"
+          else
+            PATCH=$(echo "$LATEST" | sed 's/v1\.0\.//')
+            NEXT="v1.0.$((PATCH + 1))"
+          fi
+          echo "version=$NEXT" >> "$GITHUB_OUTPUT"
+          echo "Next version: $NEXT"
+
+      # ── Install dependencies ────────────────────────────────
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flex bison bc curl p7zip-full python3 jq zip \
+            make git patch rsync libssl-dev libelf-dev openjdk-17-jdk-headless ccache
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> "$GITHUB_ENV"
+
+      # ── Setup ccache ────────────────────────────────────────
+      - name: Setup ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: ccache-kernel-${{ github.sha }}
+          restore-keys: ccache-kernel-
+
+      # ── Download & cache Clang toolchain ────────────────────
+      - name: Setup Clang toolchain
+        run: |
+          TC_DIR="$GITHUB_WORKSPACE/tc"
+          CLANG_DIR="$TC_DIR/r383902b1"
+          if [ ! -f "$CLANG_DIR/bin/clang" ]; then
+            echo "Downloading Clang r383902b1..."
+            mkdir -p "$CLANG_DIR"
+            curl -L "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/master/clang-r383902b1.tar.gz" \
+              | tar -xz -C "$CLANG_DIR" 2>/dev/null || {
+              echo "Googlesource failed, trying LLVM mirror..."
+              curl -L "https://github.com/llvm/llvm-project/releases/download/llvmorg-12.0.5/clang+llvm-12.0.5-x86_64-linux-gnu-ubuntu-16.04.tar.xz" \
+                | tar -xJ -C "$TC_DIR"
+              mv "$TC_DIR"/clang+llvm-* "$CLANG_DIR" || true
+            }
+          fi
+          [ -f "$CLANG_DIR/bin/clang" ] || { echo "❌ Clang setup failed"; exit 1; }
+          echo "✅ Clang ready"
+
+      # ── Setup Android boot image editor ─────────────────────
+      - name: Setup boot image editor
+        run: |
+          BOOT_EDITOR_DIR="$GITHUB_WORKSPACE/tc/Android_boot_image_editor"
+          if [ ! -d "$BOOT_EDITOR_DIR" ]; then
+            git clone --depth 1 https://github.com/cfig/Android_boot_image_editor.git "$BOOT_EDITOR_DIR"
+          fi
+          echo "✅ Boot image editor ready"
+
+      # ── Clone kernel source ─────────────────────────────────
+      - name: Clone kernel source
+        run: |
+          KERNEL_DIR="$GITHUB_WORKSPACE/android_kernel_msm-5.4_nothing_sm7325"
+          if [ ! -d "$KERNEL_DIR/.git" ]; then
+            git clone --depth 1 -b sm7325/v/mr \
+              https://github.com/NothingOSS/android_kernel_msm-5.4_nothing_sm7325.git "$KERNEL_DIR"
+          fi
+          echo "✅ Kernel source ready"
+
+      # ── Setup KernelSU-Next ─────────────────────────────────
+      - name: Setup KernelSU-Next (legacy_susfs)
+        run: |
+          KERNEL_DIR="$GITHUB_WORKSPACE/android_kernel_msm-5.4_nothing_sm7325"
+          cd "$KERNEL_DIR"
+
+          # Clone KernelSU-Next
+          if [ ! -d "KernelSU-Next/.git" ]; then
+            git clone -b legacy_susfs https://github.com/KernelSU-Next/KernelSU-Next.git KernelSU-Next
+          else
+            cd KernelSU-Next
+            git fetch origin legacy_susfs
+            git reset --hard origin/legacy_susfs
+            git clean -fd
+            cd ..
+          fi
+
+          # Unshallow for correct version
+          cd KernelSU-Next
+          git fetch --unshallow 2>/dev/null || true
+          KSU_COUNT=$(git rev-list --count HEAD)
+          echo "KSU commit count: $KSU_COUNT → KSU_VERSION=$((30000 + KSU_COUNT))"
+          cd ..
+
+          # Setup driver symlink
+          [ -L "drivers/kernelsu" ] || ln -sf "../KernelSU-Next/kernel" "drivers/kernelsu"
+          grep -q "kernelsu" drivers/Makefile || printf '\nobj-$(CONFIG_KSU) += kernelsu/\n' >> drivers/Makefile
+          grep -q 'source "drivers/kernelsu/Kconfig"' drivers/Kconfig || \
+            sed -i '/endmenu/i\source "drivers/kernelsu/Kconfig"' drivers/Kconfig
+
+          # Bypass signature check
+          sed -i 's/return check_v2_signature(path, EXPECTED_MANAGER_SIZE, EXPECTED_MANAGER_HASH);/return true;/g' \
+            KernelSU-Next/kernel/apk_sign.c
+
+          echo "✅ KernelSU-Next integrated"
+
+      # ── Setup SUSFS ─────────────────────────────────────────
+      - name: Setup SUSFS
+        run: |
+          KERNEL_DIR="$GITHUB_WORKSPACE/android_kernel_msm-5.4_nothing_sm7325"
+          cd "$KERNEL_DIR"
+
+          rm -rf temp_susfs4ksu
+          git clone --depth 1 -b gki-android12-5.10 https://gitlab.com/simonpunk/susfs4ksu.git temp_susfs4ksu
+          cp -v temp_susfs4ksu/kernel_patches/include/linux/susfs*.h include/linux/
+          [ -f "temp_susfs4ksu/kernel_patches/include/linux/mac_user_macros.h" ] && \
+            cp -v temp_susfs4ksu/kernel_patches/include/linux/mac_user_macros.h include/linux/
+          cp -v temp_susfs4ksu/kernel_patches/fs/susfs.c fs/susfs.c
+          rm -rf temp_susfs4ksu
+
+          # 5.4 compat for susfs.c
+          python3 -c '
+          with open("fs/susfs.c", "r") as f:
+              text = f.read()
+          old = """static const struct fsnotify_ops fsnotify_ops = {
+          \t.handle_inode_event = susfs_handle_sdcard_inode_event,
+          };"""
+          new = """#include <linux/version.h>
+          #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
+          static const struct fsnotify_ops fsnotify_ops = {
+          \t.handle_inode_event = susfs_handle_sdcard_inode_event,
+          };
+          #else
+          static int susfs_handle_sdcard_event_compat(struct fsnotify_group *group, struct inode *inode, u32 mask, const void *data, int data_type, const struct qstr *file_name, u32 cookie, struct fsnotify_iter_info *iter_info)
+          {
+              return susfs_handle_sdcard_inode_event(NULL, mask, inode, NULL, file_name, cookie);
+          }
+          static const struct fsnotify_ops fsnotify_ops = {
+          \t.handle_event = susfs_handle_sdcard_event_compat,
+          };
+          #endif"""
+          if old in text:
+              text = text.replace(old, new)
+              text = text.replace("extern bool susfs_is_avc_log_spoofing_enabled;", "bool susfs_is_avc_log_spoofing_enabled = false;")
+              with open("fs/susfs.c", "w") as f:
+                  f.write(text)
+              print("✅ SUSFS 5.4 compat applied")
+          else:
+              print("ℹ️  SUSFS compat already applied or pattern changed")
+          '
+
+      # ── Build kernel ────────────────────────────────────────
+      - name: Build kernel
+        id: build
+        run: |
+          KERNEL_DIR="$GITHUB_WORKSPACE/android_kernel_msm-5.4_nothing_sm7325"
+          CLANG_DIR="$GITHUB_WORKSPACE/tc/r383902b1"
+          RAW_DIR="$GITHUB_WORKSPACE/output/rawfiles"
+          export PATH="$CLANG_DIR/bin:$PATH"
+          export CCACHE_COMPRESS=1 CCACHE_DIR="$HOME/.ccache" CCACHE_MAXSIZE="5G"
+
+          cd "$KERNEL_DIR"
+
+          # Read version info
+          KERNEL_VERSION=$(cat VERSION | tr -d '\n')
+          PATCHLEVEL=$(cat PATCHLEVEL 2>/dev/null | tr -d '\n' || echo "0")
+          echo "kernel_version=v${KERNEL_VERSION}.${PATCHLEVEL}" >> "$GITHUB_OUTPUT"
+          echo "Building kernel v${KERNEL_VERSION}.${PATCHLEVEL}..."
+
+          mkdir -p "$RAW_DIR"
+
+          MAKE_PARAMS=(
+            O="$RAW_DIR"
+            ARCH=arm64
+            CC="ccache clang"
+            CLANG_TRIPLE=aarch64-linux-gnu-
+            LLVM=1
+            LLVM_IAS=1
+            CROSS_COMPILE="$CLANG_DIR/bin/llvm-"
+            LOCALVERSION="-qgki"
+          )
+
+          make "${MAKE_PARAMS[@]}" spacewar_defconfig
+          make -j$(nproc --all) "${MAKE_PARAMS[@]}"
+          echo "✅ Kernel build complete"
+
+      # ── Detect OS version from stock boot tag ───────────────
+      - name: Detect stock OS version
+        id: os_version
+        run: |
+          LATEST_TAG=$(curl -sf https://api.github.com/repos/spike0en/nothing_archive/releases \
+            | grep -oP '"tag_name": "\KSpacewar_[^"]+' | head -n 1)
+          [ -z "$LATEST_TAG" ] && LATEST_TAG="Spacewar_V3.2-251219-1652"
+
+          # Extract OS version (e.g., "3.2" from "Spacewar_V3.2-251219-1652")
+          OS_VERSION=$(echo "$LATEST_TAG" | grep -oP 'V\K[0-9]+\.[0-9]+')
+          [ -z "$OS_VERSION" ] && OS_VERSION="3.2"
+
+          echo "stock_tag=$LATEST_TAG" >> "$GITHUB_OUTPUT"
+          echo "os_version=$OS_VERSION" >> "$GITHUB_OUTPUT"
+          echo "Stock tag: $LATEST_TAG (NOS $OS_VERSION)"
+
+      # ── Repack boot.img ─────────────────────────────────────
+      - name: Repack boot.img
+        run: |
+          KERNEL_DIR="$GITHUB_WORKSPACE/android_kernel_msm-5.4_nothing_sm7325"
+          RAW_DIR="$GITHUB_WORKSPACE/output/rawfiles"
+          BOOT_EDITOR_DIR="$GITHUB_WORKSPACE/tc/Android_boot_image_editor"
+          OUTPUT_DIR="$GITHUB_WORKSPACE/output"
+          LATEST_TAG="${{ steps.os_version.outputs.stock_tag }}"
+
+          cd "$KERNEL_DIR"
+
+          # Download stock boot
+          DOWNLOAD_URL="https://github.com/spike0en/nothing_archive/releases/download/${LATEST_TAG}/${LATEST_TAG}-image-boot.7z"
+          curl -L "$DOWNLOAD_URL" -o image-boot.7z || true
+          if [ ! -s "image-boot.7z" ]; then
+            LATEST_TAG="Spacewar_V3.2-251219-1652"
+            curl -L "https://github.com/spike0en/nothing_archive/releases/download/${LATEST_TAG}/${LATEST_TAG}-image-boot.7z" -o image-boot.7z
+          fi
+
+          7z x -y image-boot.7z
+          EXTRACTED_BOOT=$(find . -maxdepth 2 -name "boot.img" ! -path "./AnyKernel3/*" | head -1)
+          rm -f image-boot.7z
+
+          # Repack
+          cp "$EXTRACTED_BOOT" "$BOOT_EDITOR_DIR/boot.img"
+          cd "$BOOT_EDITOR_DIR"
+          ./gradlew unpack
+          cp "$RAW_DIR/arch/arm64/boot/Image" build/unzip_boot/kernel
+          ./gradlew pack
+          [ -f boot.img.signed ] && cp boot.img.signed "$OUTPUT_DIR/boot.img" \
+            || cp boot.img "$OUTPUT_DIR/boot.img"
+
+          echo "✅ boot.img repacked"
+
+      # ── Package AnyKernel3 ZIP ──────────────────────────────
+      - name: Package AnyKernel3 ZIP
+        id: package
+        run: |
+          KERNEL_DIR="$GITHUB_WORKSPACE/android_kernel_msm-5.4_nothing_sm7325"
+          RAW_DIR="$GITHUB_WORKSPACE/output/rawfiles"
+          OUTPUT_DIR="$GITHUB_WORKSPACE/output"
+          BUILD_VERSION="${{ steps.version.outputs.version }}"
+          OS_VERSION="${{ steps.os_version.outputs.os_version }}"
+          KERNEL_VER="${{ steps.build.outputs.kernel_version }}"
+
+          cd "$KERNEL_DIR"
+
+          [ -d "AnyKernel3" ] || git clone https://github.com/zerofrip/AnyKernel3 -b spacewar_nos3.0 AnyKernel3
+
+          cp "$RAW_DIR/arch/arm64/boot/Image" AnyKernel3/
+          if ls "$RAW_DIR/arch/arm64/boot/dts/vendor/qcom/"*.dtb &>/dev/null; then
+            cat "$RAW_DIR/arch/arm64/boot/dts/vendor/qcom/"*.dtb > AnyKernel3/dtb
+          fi
+          if ls "$RAW_DIR/arch/arm64/boot/dts/vendor/qcom/"*.dtbo &>/dev/null; then
+            python3 scripts/mkdtboimg.py create AnyKernel3/dtbo.img \
+              --page_size=4096 "$RAW_DIR/arch/arm64/boot/dts/vendor/qcom/"*.dtbo
+          fi
+
+          ZIP_NAME="Spacewar_NOS${OS_VERSION}_KernelSU-Next_${KERNEL_VER}_${BUILD_VERSION}.zip"
+          cd AnyKernel3
+          zip -r9 "$OUTPUT_DIR/$ZIP_NAME" ./* -x .git README.md '*placeholder*'
+          cd ..
+
+          echo "zip_name=$ZIP_NAME" >> "$GITHUB_OUTPUT"
+          echo "✅ Packaged: $ZIP_NAME"
+
+      # ── Create GitHub Release ───────────────────────────────
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: "NOS ${{ steps.os_version.outputs.os_version }} | Kernel ${{ steps.build.outputs.kernel_version }} | ${{ steps.version.outputs.version }}"
+          body: |
+            ## Spacewar KernelSU-Next — ${{ steps.version.outputs.version }}
+
+            **Nothing OS:** ${{ steps.os_version.outputs.os_version }}
+            **Kernel:** ${{ steps.build.outputs.kernel_version }}
+            **Stock boot base:** ${{ steps.os_version.outputs.stock_tag }}
+            **KernelSU-Next:** legacy_susfs branch
+            **SUSFS:** v2.0.0
+
+            ### Install
+            - **Fastboot:** `fastboot flash boot boot.img`
+            - **Kernel Manager:** Flash the `.zip` via Franco KM / SmartPack
+            - **Manager APK:** Install from [rifsxd/KernelSU-Next releases](https://github.com/rifsxd/KernelSU-Next/releases)
+
+            ### ⚠️ Compatibility
+            Only flash on devices running **NOS ${{ steps.os_version.outputs.os_version }}** (stock tag: `${{ steps.os_version.outputs.stock_tag }}`).
+          files: |
+            output/boot.img
+            output/${{ steps.package.outputs.zip_name }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
