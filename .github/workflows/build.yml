@@ -144,44 +144,13 @@ jobs:
           KERNEL_DIR="$GITHUB_WORKSPACE/android_kernel_msm-5.4_nothing_sm7325"
           cd "$KERNEL_DIR"
 
-          rm -rf temp_susfs4ksu
-          git clone --depth 1 -b gki-android12-5.10 https://gitlab.com/simonpunk/susfs4ksu.git temp_susfs4ksu
-          cp -v temp_susfs4ksu/kernel_patches/include/linux/susfs*.h include/linux/
-          [ -f "temp_susfs4ksu/kernel_patches/include/linux/mac_user_macros.h" ] && \
-            cp -v temp_susfs4ksu/kernel_patches/include/linux/mac_user_macros.h include/linux/
-          cp -v temp_susfs4ksu/kernel_patches/fs/susfs.c fs/susfs.c
-          rm -rf temp_susfs4ksu
+          # Copy pre-patched SUSFS v2.0.0 files (from zerofrip's working 5.4 kernel,
+          # with try_umount stub for KernelSU-Next legacy_susfs compat)
+          cp -v "$GITHUB_WORKSPACE/configs/susfs/susfs.c" fs/susfs.c
+          cp -v "$GITHUB_WORKSPACE/configs/susfs/include/linux/susfs.h" include/linux/susfs.h
+          cp -v "$GITHUB_WORKSPACE/configs/susfs/include/linux/susfs_def.h" include/linux/susfs_def.h
 
-          # 5.4 compat for susfs.c
-          python3 -c '
-          with open("fs/susfs.c", "r") as f:
-              text = f.read()
-          old = """static const struct fsnotify_ops fsnotify_ops = {
-          \t.handle_inode_event = susfs_handle_sdcard_inode_event,
-          };"""
-          new = """#include <linux/version.h>
-          #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-          static const struct fsnotify_ops fsnotify_ops = {
-          \t.handle_inode_event = susfs_handle_sdcard_inode_event,
-          };
-          #else
-          static int susfs_handle_sdcard_event_compat(struct fsnotify_group *group, struct inode *inode, u32 mask, const void *data, int data_type, const struct qstr *file_name, u32 cookie, struct fsnotify_iter_info *iter_info)
-          {
-              return susfs_handle_sdcard_inode_event(NULL, mask, inode, NULL, file_name, cookie);
-          }
-          static const struct fsnotify_ops fsnotify_ops = {
-          \t.handle_event = susfs_handle_sdcard_event_compat,
-          };
-          #endif"""
-          if old in text:
-              text = text.replace(old, new)
-              text = text.replace("extern bool susfs_is_avc_log_spoofing_enabled;", "bool susfs_is_avc_log_spoofing_enabled = false;")
-              with open("fs/susfs.c", "w") as f:
-                  f.write(text)
-              print("✅ SUSFS 5.4 compat applied")
-          else:
-              print("ℹ️  SUSFS compat already applied or pattern changed")
-          '
+          echo "✅ SUSFS v2.0.0 installed"
 
       # ── Build kernel ────────────────────────────────────────
       - name: Build kernel
