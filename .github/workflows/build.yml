@@ -95,6 +95,13 @@ jobs:
           fi
           echo "✅ Kernel source ready"
 
+      # ── Copy spacewar_defconfig into kernel tree ───────────
+      - name: Copy spacewar_defconfig
+        run: |
+          cp "$GITHUB_WORKSPACE/configs/spacewar_defconfig" \
+            "$GITHUB_WORKSPACE/android_kernel_msm-5.4_nothing_sm7325/arch/arm64/configs/spacewar_defconfig"
+          echo "✅ spacewar_defconfig copied"
+
       # ── Setup KernelSU-Next ─────────────────────────────────
       - name: Setup KernelSU-Next (legacy_susfs)
         run: |

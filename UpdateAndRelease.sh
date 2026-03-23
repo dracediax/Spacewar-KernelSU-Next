@@ -112,6 +112,11 @@ fi
 cd "$KERNEL_ROOT"
 [ -f "Kbuild" ] || die "Kbuild not found in $KERNEL_ROOT"
 
+# Copy spacewar_defconfig into kernel tree
+echo "   Copying spacewar_defconfig..."
+cp "$SCRIPT_DIR/configs/spacewar_defconfig" "$KERNEL_ROOT/arch/arm64/configs/spacewar_defconfig"
+echo "   ✅ spacewar_defconfig copied."
+
 # ── 3. KernelSU-Next (legacy_susfs) ────────────────────
 echo "💉 Setting up KernelSU-Next ($KSU_BRANCH)..."
 
