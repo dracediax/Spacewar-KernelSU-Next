@@ -167,13 +167,17 @@ jobs:
 
           echo "SUSFS v2.0.0 installed"
 
-          # Disable PINCTRL_WCD — it needs internal pinctrl headers not
-          # available when building in-tree (designed as out-of-tree DLKM)
+          # Disable PINCTRL_WCD and PINCTRL_LPI — they need internal pinctrl
+          # headers not available when building in-tree (designed as out-of-tree DLKMs)
           sed -i 's/^export CONFIG_PINCTRL_WCD=m/# export CONFIG_PINCTRL_WCD=m/' \
+            techpack/audio/config/lahainaauto.conf
+          sed -i 's/^export CONFIG_PINCTRL_LPI=m/# export CONFIG_PINCTRL_LPI=m/' \
             techpack/audio/config/lahainaauto.conf
           sed -i 's/^#define CONFIG_PINCTRL_WCD 1/\/\/ #define CONFIG_PINCTRL_WCD 1/' \
             techpack/audio/config/lahainaautoconf.h
-          echo "PINCTRL_WCD disabled (not buildable in-tree)"
+          sed -i 's/^#define CONFIG_PINCTRL_LPI 1/\/\/ #define CONFIG_PINCTRL_LPI 1/' \
+            techpack/audio/config/lahainaautoconf.h
+          echo "PINCTRL_WCD and PINCTRL_LPI disabled (not buildable in-tree)"
 
       # ── Build kernel ────────────────────────────────────────
       - name: Build kernel
