@@ -24,7 +24,7 @@ set -euo pipefail
 # ╔══════════════════════════════════════════════════════╗
 # ║                   CONFIGURATION                      ║
 # ╚══════════════════════════════════════════════════════╝
-KERNEL_REPO="https://github.com/NothingOSS/android_kernel_msm-5.4_nothing_sm7325.git"
+KERNEL_REPO="https://github.com/zerofrip/Spacewar_NOS3.0_Kernel.git"
 KERNEL_BRANCH="sm7325/v/mr"
 KERNEL_DIR="android_kernel_msm-5.4_nothing_sm7325"
 
@@ -169,20 +169,28 @@ else
     echo "   ℹ️  Already patched."
 fi
 
-# ── 5. SUSFS ────────────────────────────────────────────
-echo "📥 Setting up SUSFS..."
+# ── 5. Patch kernel source ─────────────────────────────
+echo "🔧 Patching kernel source..."
 
-# Copy pre-patched SUSFS v2.0.0 files (from zerofrip's working 5.4 kernel,
-# with try_umount stub for KernelSU-Next legacy_susfs compat)
-cp -v "$SCRIPT_DIR/configs/susfs/susfs.c" fs/susfs.c
-cp -v "$SCRIPT_DIR/configs/susfs/include/linux/susfs.h" include/linux/susfs.h
-cp -v "$SCRIPT_DIR/configs/susfs/include/linux/susfs_def.h" include/linux/susfs_def.h
+# Add stubs for functions upstream legacy_susfs calls but
+# zerofrip's SUSFS v2.0.0 doesn't implement
+if ! grep -q "susfs_try_umount" fs/susfs.c; then
+    cat >> fs/susfs.c << 'STUBS'
 
-# Add susfs.o to fs/Makefile if not already present
-grep -q "susfs.o" fs/Makefile || \
-    printf '\nobj-$(CONFIG_KSU_SUSFS) += susfs.o\n' >> fs/Makefile
-
-echo "   ✅ SUSFS v2.0.0 installed."
+/* Stubs for KernelSU-Next legacy_susfs branch compat */
+#ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT
+void susfs_add_try_umount(void __user **user_info) {
+}
+void susfs_try_umount(uid_t uid) {
+}
+#endif
+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
+void susfs_reorder_mnt_id(void) {
+}
+#endif
+STUBS
+    echo "   ✅ SUSFS compat stubs added."
+fi
 
 # Disable PINCTRL_WCD and PINCTRL_LPI — they need internal pinctrl
 # headers not available when building in-tree (designed as out-of-tree DLKMs)

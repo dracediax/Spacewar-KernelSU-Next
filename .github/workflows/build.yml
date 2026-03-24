@@ -75,7 +75,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: android_kernel_msm-5.4_nothing_sm7325
-          key: kernel-source-sm7325-v1
+          key: kernel-source-zerofrip-v1
 
       - name: Restore boot image editor
         id: cache-booteditor
@@ -97,7 +97,7 @@ jobs:
         if: steps.cache-kernel.outputs.cache-hit != 'true'
         run: |
           git clone --depth 1 -b sm7325/v/mr \
-            https://github.com/NothingOSS/android_kernel_msm-5.4_nothing_sm7325.git \
+            https://github.com/zerofrip/Spacewar_NOS3.0_Kernel.git \
             android_kernel_msm-5.4_nothing_sm7325
 
       - name: Clone boot image editor
@@ -119,7 +119,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: android_kernel_msm-5.4_nothing_sm7325
-          key: kernel-source-sm7325-v1
+          key: kernel-source-zerofrip-v1
 
       - name: Save boot editor cache
         if: always() && steps.cache-booteditor.outputs.cache-hit != 'true'
@@ -183,23 +183,31 @@ jobs:
 
           echo "KernelSU-Next integrated"
 
-      # ── Setup SUSFS ─────────────────────────────────────────
-      - name: Setup SUSFS
+      # ── Patch kernel source ──────────────────────────────────
+      - name: Patch kernel source
         run: |
           KERNEL_DIR="$GITHUB_WORKSPACE/android_kernel_msm-5.4_nothing_sm7325"
           cd "$KERNEL_DIR"
 
-          # Copy pre-patched SUSFS v2.0.0 files (from zerofrip's working 5.4 kernel,
-          # with try_umount stub for KernelSU-Next legacy_susfs compat)
-          cp -v "$GITHUB_WORKSPACE/configs/susfs/susfs.c" fs/susfs.c
-          cp -v "$GITHUB_WORKSPACE/configs/susfs/include/linux/susfs.h" include/linux/susfs.h
-          cp -v "$GITHUB_WORKSPACE/configs/susfs/include/linux/susfs_def.h" include/linux/susfs_def.h
+          # Add stubs for functions upstream legacy_susfs calls but
+          # zerofrip's SUSFS v2.0.0 doesn't implement
+          if ! grep -q "susfs_try_umount" fs/susfs.c; then
+            cat >> fs/susfs.c << 'STUBS'
 
-          # Add susfs.o to fs/Makefile if not already present
-          grep -q "susfs.o" fs/Makefile || \
-            printf '\nobj-$(CONFIG_KSU_SUSFS) += susfs.o\n' >> fs/Makefile
-
-          echo "SUSFS v2.0.0 installed"
+/* Stubs for KernelSU-Next legacy_susfs branch compat */
+#ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT
+void susfs_add_try_umount(void __user **user_info) {
+}
+void susfs_try_umount(uid_t uid) {
+}
+#endif
+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
+void susfs_reorder_mnt_id(void) {
+}
+#endif
+STUBS
+            echo "SUSFS compat stubs added"
+          fi
 
           # Disable PINCTRL_WCD and PINCTRL_LPI — they need internal pinctrl
           # headers not available when building in-tree (designed as out-of-tree DLKMs)
