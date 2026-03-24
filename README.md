@@ -1,14 +1,22 @@
+> [!CAUTION]
+> **CURRENTLY BROKEN — DO NOT FLASH — WORK IN PROGRESS**
+>
+> This kernel is under active development and is not yet stable. Do not flash it on your device.
+
 # Nothing Phone (1) Kernel Builder
 
 Automated kernel builder for Nothing Phone (1) **Spacewar** with KernelSU-Next root and SUSFS.
+
+> [!WARNING]
+> **Flash at your own risk.** This is a custom kernel — flashing it can brick your device, cause boot loops, or break functionality. You must know what you are doing. Make sure you have a backup of your stock boot image before proceeding. **I take no responsibility for any damage, bricked devices, or broken phones.**
 
 ## Sources
 
 | Component | Repository | Branch |
 |---|---|---|
-| Kernel | [NothingOSS/android_kernel_msm-5.4_nothing_sm7325](https://github.com/NothingOSS/android_kernel_msm-5.4_nothing_sm7325) | `sm7325/v/mr` |
+| Kernel | [zerofrip/Spacewar_NOS3.0_Kernel](https://github.com/zerofrip/Spacewar_NOS3.0_Kernel) | `sm7325/v/mr` |
 | KernelSU-Next | [KernelSU-Next/KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next) | `legacy_susfs` |
-| SUSFS | [simonpunk/susfs4ksu](https://gitlab.com/simonpunk/susfs4ksu) | `gki-android12-5.10` |
+| SUSFS | Built into kernel source | v2.0.0 |
 | AnyKernel3 | [zerofrip/AnyKernel3](https://github.com/zerofrip/AnyKernel3) | `spacewar_nos3.0` |
 | Stock boot images | [spike0en/nothing_archive](https://github.com/spike0en/nothing_archive) | — |
 
@@ -28,7 +36,7 @@ The script auto-downloads all dependencies (Clang toolchain, boot image editor, 
 After a successful build, `output/` contains:
 
 - `boot.img` — Flash via `fastboot flash boot boot.img`
-- `Uo_Spacewar_Kernel_*.zip` — Flash via kernel manager (Franco, SmartPack)
+- `Spacewar_NOS*_KernelSU-Next_*.zip` — Flash via kernel manager (Franco, SmartPack)
 
 ## Manager
 
@@ -41,8 +49,8 @@ The official `dev` branch dropped support for kernel 5.4 (SELinux policy patchin
 
 ## Credits
 
-- **NothingOSS** — Kernel source
+- **zerofrip** — Spacewar kernel source with SUSFS patches & AnyKernel3 config
+- **NothingOSS** — Original kernel source
 - **KernelSU-Next** — Root framework
 - **simonpunk** — SUSFS
-- **zerofrip** — Original Spacewar kernel builder & AnyKernel3 config
 - **spike0en** — Stock boot image archive
