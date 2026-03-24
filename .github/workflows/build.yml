@@ -145,6 +145,7 @@ jobs:
 
       # ── Setup KernelSU-Next ─────────────────────────────────
       - name: Setup KernelSU-Next (legacy_susfs)
+        id: ksu
         run: |
           KERNEL_DIR="$GITHUB_WORKSPACE/android_kernel_msm-5.4_nothing_sm7325"
           cd "$KERNEL_DIR"
@@ -160,11 +161,14 @@ jobs:
             cd ..
           fi
 
-          # Unshallow for correct version
+          # Unshallow and fetch tags for version detection
           cd KernelSU-Next
           git fetch --unshallow 2>/dev/null || true
-          KSU_COUNT=$(git rev-list --count HEAD)
-          echo "KSU commit count: $KSU_COUNT -> KSU_VERSION=$((30000 + KSU_COUNT))"
+          git fetch --tags 2>/dev/null || true
+          KSU_VERSION=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' | sed 's/-legacy-susfs//')
+          [ -z "$KSU_VERSION" ] && KSU_VERSION="unknown"
+          echo "ksu_version=$KSU_VERSION" >> "$GITHUB_OUTPUT"
+          echo "KernelSU-Next version: $KSU_VERSION"
           cd ..
 
           # Setup driver symlink
@@ -220,13 +224,6 @@ jobs:
           export CCACHE_COMPRESS=1 CCACHE_DIR="$HOME/.ccache" CCACHE_MAXSIZE="5G"
 
           cd "$KERNEL_DIR"
-
-          # Read version info
-          KERNEL_VERSION=$(cat VERSION | tr -d '\n')
-          PATCHLEVEL=$(cat PATCHLEVEL 2>/dev/null | tr -d '\n' || echo "0")
-          echo "kernel_version=v${KERNEL_VERSION}.${PATCHLEVEL}" >> "$GITHUB_OUTPUT"
-          echo "Building kernel v${KERNEL_VERSION}.${PATCHLEVEL}..."
-
           mkdir -p "$RAW_DIR"
 
           MAKE_PARAMS=(
@@ -303,7 +300,7 @@ jobs:
           OUTPUT_DIR="$GITHUB_WORKSPACE/output"
           BUILD_VERSION="${{ steps.version.outputs.version }}"
           OS_VERSION="${{ steps.os_version.outputs.os_version }}"
-          KERNEL_VER="${{ steps.build.outputs.kernel_version }}"
+          KSU_VER="${{ steps.ksu.outputs.ksu_version }}"
 
           cd "$KERNEL_DIR"
 
@@ -318,7 +315,7 @@ jobs:
               --page_size=4096 "$RAW_DIR/arch/arm64/boot/dts/vendor/qcom/"*.dtbo
           fi
 
-          ZIP_NAME="Spacewar_NOS${OS_VERSION}_KernelSU-Next_${KERNEL_VER}_${BUILD_VERSION}.zip"
+          ZIP_NAME="Spacewar_NOS${OS_VERSION}_KernelSU-Next_v${KSU_VER}_${BUILD_VERSION}.zip"
           cd AnyKernel3
           zip -r9 "$OUTPUT_DIR/$ZIP_NAME" ./* -x .git README.md '*placeholder*'
           cd ..
@@ -331,15 +328,14 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.version }}
-          name: "NOS ${{ steps.os_version.outputs.os_version }} | Kernel ${{ steps.build.outputs.kernel_version }} | ${{ steps.version.outputs.version }}"
+          name: "NOS ${{ steps.os_version.outputs.os_version }} | KernelSU-Next v${{ steps.ksu.outputs.ksu_version }} | ${{ steps.version.outputs.version }}"
           body: |
             ## Spacewar KernelSU-Next — ${{ steps.version.outputs.version }}
 
             **Nothing OS:** ${{ steps.os_version.outputs.os_version }}
-            **Kernel:** ${{ steps.build.outputs.kernel_version }}
-            **Stock boot base:** ${{ steps.os_version.outputs.stock_tag }}
-            **KernelSU-Next:** legacy_susfs branch
+            **KernelSU-Next:** v${{ steps.ksu.outputs.ksu_version }}
             **SUSFS:** v2.0.0
+            **Stock boot base:** ${{ steps.os_version.outputs.stock_tag }}
 
             ### Install
             - **Fastboot:** `fastboot flash boot boot.img`
