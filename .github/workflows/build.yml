@@ -192,20 +192,14 @@ jobs:
           # Add stubs for functions upstream legacy_susfs calls but
           # zerofrip's SUSFS v2.0.0 doesn't implement
           if ! grep -q "susfs_try_umount" fs/susfs.c; then
-            cat >> fs/susfs.c << 'STUBS'
-
-/* Stubs for KernelSU-Next legacy_susfs branch compat */
-#ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT
-void susfs_add_try_umount(void __user **user_info) {
-}
-void susfs_try_umount(uid_t uid) {
-}
-#endif
-#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-void susfs_reorder_mnt_id(void) {
-}
-#endif
-STUBS
+            printf '\n/* Stubs for KernelSU-Next legacy_susfs branch compat */\n' >> fs/susfs.c
+            printf '#ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT\n' >> fs/susfs.c
+            printf 'void susfs_add_try_umount(void __user **user_info) {}\n' >> fs/susfs.c
+            printf 'void susfs_try_umount(uid_t uid) {}\n' >> fs/susfs.c
+            printf '#endif\n' >> fs/susfs.c
+            printf '#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT\n' >> fs/susfs.c
+            printf 'void susfs_reorder_mnt_id(void) {}\n' >> fs/susfs.c
+            printf '#endif\n' >> fs/susfs.c
             echo "SUSFS compat stubs added"
           fi
 
