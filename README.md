@@ -23,7 +23,7 @@ Grab the latest release from the [Releases](https://github.com/dracediax/Spacewa
    ```
    fastboot flash boot boot.img
    ```
-   Or flash the AnyKernel3 zip via custom recovery.
+   Or flash `Spacewar_NOS3.2_KernelSU-Next_v*.zip` via custom recovery.
 3. Install [KernelSU-Next Manager](https://github.com/rifsxd/KernelSU-Next/releases)
 
 ## Build Locally
