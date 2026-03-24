@@ -179,7 +179,7 @@ if ! grep -q "DEFAULT_SUS_MNT_ID" include/linux/susfs_def.h; then
 fi
 if ! grep -q "susfs_add_try_umount" include/linux/susfs.h; then
     sed -i '/^void susfs_init/i \
-\n/* legacy_susfs compat */\n#ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT\nvoid susfs_add_try_umount(void __user **user_info);\nvoid susfs_try_umount(uid_t uid);\nvoid susfs_try_umount_all(uid_t uid);\n#endif\n#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT\nvoid susfs_reorder_mnt_id(void);\n#endif' include/linux/susfs.h
+\n/* legacy_susfs compat */\n#ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT\nvoid susfs_add_try_umount(void __user **user_info);\nvoid susfs_try_umount(uid_t uid);\nvoid susfs_try_umount_all(uid_t uid);\n#endif' include/linux/susfs.h
     echo "   ✅ Added compat declarations to susfs.h"
 fi
 if ! grep -q "susfs_try_umount" fs/susfs.c; then
@@ -190,9 +190,6 @@ if ! grep -q "susfs_try_umount" fs/susfs.c; then
 void susfs_add_try_umount(void __user **user_info) {}
 void susfs_try_umount(uid_t uid) {}
 void susfs_try_umount_all(uid_t uid) {}
-#endif
-#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-void susfs_reorder_mnt_id(void) {}
 #endif
 STUBS
     echo "   ✅ SUSFS compat stubs added."
