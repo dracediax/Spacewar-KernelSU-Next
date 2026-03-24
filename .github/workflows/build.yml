@@ -221,8 +221,16 @@ STUBS
             techpack/audio/config/lahainaautoconf.h
           echo "PINCTRL_WCD and PINCTRL_LPI disabled (not buildable in-tree)"
 
-      # ── Build kernel ────────────────────────────────────────
+      # ── Build kernel (cached for testing) ─────────────────
+      - name: Restore kernel build cache
+        id: cache-build
+        uses: actions/cache/restore@v4
+        with:
+          path: output/rawfiles
+          key: kernel-build-v1
+
       - name: Build kernel
+        if: steps.cache-build.outputs.cache-hit != 'true'
         id: build
         run: |
           KERNEL_DIR="$GITHUB_WORKSPACE/android_kernel_msm-5.4_nothing_sm7325"
@@ -248,6 +256,13 @@ STUBS
           make "${MAKE_PARAMS[@]}" spacewar_defconfig
           make -j$(nproc --all) "${MAKE_PARAMS[@]}"
           echo "Kernel build complete"
+
+      - name: Save kernel build cache
+        if: steps.cache-build.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: output/rawfiles
+          key: kernel-build-v1
 
       # ── Detect OS version from stock boot tag ───────────────
       - name: Detect stock OS version
