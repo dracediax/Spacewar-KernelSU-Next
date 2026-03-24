@@ -195,8 +195,8 @@ jobs:
             echo "Added DEFAULT_SUS_MNT_ID to susfs_def.h"
           fi
           if ! grep -q "susfs_add_try_umount" include/linux/susfs.h; then
-            sed -i '/#endif.*KSU_SUSFS_H/i \
-            \n/* Stubs for KernelSU-Next legacy_susfs compat */\n#ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT\nvoid susfs_add_try_umount(void __user **user_info);\nvoid susfs_try_umount(uid_t uid);\nvoid susfs_try_umount_all(uid_t uid);\n#endif\n#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT\nvoid susfs_reorder_mnt_id(void);\n#endif' include/linux/susfs.h
+            sed -i '/^void susfs_init/i \
+            \n/* legacy_susfs compat */\n#ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT\nvoid susfs_add_try_umount(void __user **user_info);\nvoid susfs_try_umount(uid_t uid);\nvoid susfs_try_umount_all(uid_t uid);\n#endif\n#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT\nvoid susfs_reorder_mnt_id(void);\n#endif' include/linux/susfs.h
             echo "Added compat declarations to susfs.h"
           fi
           if ! grep -q "susfs_try_umount" fs/susfs.c; then
