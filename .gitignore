@@ -1,0 +1,13 @@
+# Build directory (kernel source + toolchains, cloned at build time)
+SpacewarKernelBuilder/*
+!SpacewarKernelBuilder/configs/
+
+# Build output (boot.img, zip, rawfiles)
+output/
+
+# Old/backup scripts
+UpdateAndRelease_old.sh
+
+# Boot images and zips (local test artifacts)
+*.img
+*.zip

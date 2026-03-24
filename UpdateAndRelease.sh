@@ -3,20 +3,21 @@
 # UpdateAndRelease.sh — Automated Kernel Builder
 # Nothing Phone (1) Spacewar — KernelSU-Next + SUSFS
 #
-# Uses ONLY official upstream sources:
+# Sources:
 #   Kernel:      NothingOSS/android_kernel_msm-5.4_nothing_sm7325 (sm7325/v/mr)
-#   KernelSU:    KernelSU-Next/KernelSU-Next (legacy_susfs branch — has native 5.4 support)
-#   SUSFS:       simonpunk/susfs4ksu (gki-android12-5.10)
+#   KernelSU:    KernelSU-Next/KernelSU-Next (legacy_susfs branch)
 #   Boot images: spike0en/nothing_archive
 #
 # Layout:
 #   <this-repo>/
 #     UpdateAndRelease.sh
-#     android_kernel_msm-5.4_nothing_sm7325/   ← cloned on first run
-#       KernelSU-Next/                          ← cloned on first run
-#       drivers/kernelsu → ../KernelSU-Next/kernel
-#     tc/                                       ← toolchains (auto-downloaded)
-#     output/                                   ← build artifacts
+#     SpacewarKernelBuilder/
+#       configs/                                 ← defconfig + SUSFS source
+#       android_kernel_msm-5.4_nothing_sm7325/   ← cloned on first run
+#         KernelSU-Next/                          ← cloned on first run
+#         drivers/kernelsu → ../KernelSU-Next/kernel
+#       tc/                                       ← toolchains (auto-downloaded)
+#     output/                                     ← build artifacts
 #
 
 set -euo pipefail
@@ -24,35 +25,37 @@ set -euo pipefail
 # ╔══════════════════════════════════════════════════════╗
 # ║                   CONFIGURATION                      ║
 # ╚══════════════════════════════════════════════════════╝
-KERNEL_REPO="https://github.com/zerofrip/Spacewar_NOS3.0_Kernel.git"
+KERNEL_REPO="https://github.com/NothingOSS/android_kernel_msm-5.4_nothing_sm7325.git"
 KERNEL_BRANCH="sm7325/v/mr"
 KERNEL_DIR="android_kernel_msm-5.4_nothing_sm7325"
 
 KSU_REPO="https://github.com/KernelSU-Next/KernelSU-Next.git"
-KSU_BRANCH="legacy_susfs"    # Native 5.4 SELinux + seccomp support
+KSU_BRANCH="legacy_susfs"
 
 AK3_REPO="https://github.com/zerofrip/AnyKernel3"
 AK3_BRANCH="spacewar_nos3.0"
 
 DEFCONFIG="spacewar_defconfig"
+STOCK_BOOT_TAG="Spacewar_V3.2-251219-1652"
+BOOT_PARTITION_SIZE=100663296
 
 # ══════════════════════════════════════════════════════════
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TC_DIR="$SCRIPT_DIR/tc"
+BUILD_DIR="$SCRIPT_DIR/SpacewarKernelBuilder"
+TC_DIR="$BUILD_DIR/tc"
 CLANG_DIR="$TC_DIR/r383902b1"
 BOOT_EDITOR_DIR="$TC_DIR/Android_boot_image_editor"
-KERNEL_ROOT="$SCRIPT_DIR/$KERNEL_DIR"
+KERNEL_ROOT="$BUILD_DIR/$KERNEL_DIR"
 OUTPUT_DIR="$SCRIPT_DIR/output"
 RAW_DIR="$OUTPUT_DIR/rawfiles"
 
 SECONDS=0
 
-# ── Helper ───────────────────────────────────────────────
-die() { echo "❌ $*"; exit 1; }
+die() { echo "FATAL: $*"; exit 1; }
 
 # ── 0. Dependencies ─────────────────────────────────────
-echo "🔍 Checking dependencies..."
+echo "Checking dependencies..."
 
 declare -A CMD_PKG=( [flex]=flex [bison]=bison [bc]=bc [curl]=curl [7z]=p7zip-full
     [python3]=python3 [jq]=jq [zip]=zip [make]=make [git]=git [patch]=patch [rsync]=rsync )
@@ -66,19 +69,10 @@ if [ ${#MISSING[@]} -gt 0 ]; then
     MISSING=($(printf '%s\n' "${MISSING[@]}" | sort -u))
     die "Missing packages: ${MISSING[*]}\n   Fix: apt-get install -y ${MISSING[*]}"
 fi
-echo "   ✅ All dependencies satisfied."
-
-# JDK 17+ for Gradle
-JAVA_VER=$(java -version 2>&1 | awk -F'"' '/version/{print $2}' | cut -d. -f1)
-if [ -z "$JAVA_VER" ] || [ "$JAVA_VER" -lt 17 ]; then
-    echo "   ⚠️  JDK <17 — installing openjdk-17..."
-    apt-get install -y openjdk-17-jdk-headless 2>/dev/null || die "Install JDK 17 manually"
-    export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-    export PATH="$JAVA_HOME/bin:$PATH"
-fi
 
 # ── 1. Toolchains ───────────────────────────────────────
-echo "🔧 Checking toolchains..."
+mkdir -p "$BUILD_DIR"
+echo "Checking toolchains..."
 
 if [ ! -f "$CLANG_DIR/bin/clang" ]; then
     echo "   Downloading Clang r383902b1..."
@@ -86,45 +80,33 @@ if [ ! -f "$CLANG_DIR/bin/clang" ]; then
     curl -L "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/android11-qpr2-release/clang-r383902b1.tar.gz" \
         | tar -xz -C "$CLANG_DIR"
     [ -f "$CLANG_DIR/bin/clang" ] || die "Clang download failed"
-    echo "   ✅ Clang downloaded."
-else
-    echo "   ✅ Clang found."
 fi
 
 if [ ! -d "$BOOT_EDITOR_DIR" ]; then
-    echo "   Cloning Android_boot_image_editor..."
     git clone --depth 1 https://github.com/cfig/Android_boot_image_editor.git "$BOOT_EDITOR_DIR"
 fi
-echo "   ✅ Toolchains ready."
 
 export PATH="$CLANG_DIR/bin:$PATH"
 
 # ── 2. Kernel Source ────────────────────────────────────
-echo "📦 Setting up kernel source..."
+echo "Setting up kernel source..."
 
 if [ ! -d "$KERNEL_ROOT/.git" ]; then
     echo "   Cloning NothingOSS kernel ($KERNEL_BRANCH)..."
     git clone --depth 1 -b "$KERNEL_BRANCH" "$KERNEL_REPO" "$KERNEL_ROOT"
-else
-    echo "   ✅ Kernel source exists."
 fi
 
 cd "$KERNEL_ROOT"
 [ -f "Kbuild" ] || die "Kbuild not found in $KERNEL_ROOT"
 
-# Copy spacewar_defconfig into kernel tree
-echo "   Copying spacewar_defconfig..."
-cp "$SCRIPT_DIR/configs/spacewar_defconfig" "$KERNEL_ROOT/arch/arm64/configs/spacewar_defconfig"
-echo "   ✅ spacewar_defconfig copied."
+cp "$BUILD_DIR/configs/spacewar_defconfig" "$KERNEL_ROOT/arch/arm64/configs/spacewar_defconfig"
 
-# ── 3. KernelSU-Next (legacy_susfs) ────────────────────
-echo "💉 Setting up KernelSU-Next ($KSU_BRANCH)..."
+# ── 3. KernelSU-Next ────────────────────────────────────
+echo "Setting up KernelSU-Next ($KSU_BRANCH)..."
 
 if [ ! -d "KernelSU-Next/.git" ]; then
-    echo "   Cloning KernelSU-Next ($KSU_BRANCH branch)..."
     git clone -b "$KSU_BRANCH" "$KSU_REPO" KernelSU-Next
 else
-    echo "   Updating KernelSU-Next..."
     pushd KernelSU-Next > /dev/null
     git fetch origin "$KSU_BRANCH"
     git reset --hard "origin/$KSU_BRANCH"
@@ -132,71 +114,72 @@ else
     popd > /dev/null
 fi
 
-# Unshallow for correct version computation (KSU_VERSION = 30000 + commit count)
+# Get version info
 pushd KernelSU-Next > /dev/null
 if git rev-parse --is-shallow-repository 2>/dev/null | grep -q true; then
-    echo "   Unshallowing for version computation..."
     git fetch --unshallow 2>/dev/null || true
 fi
-KSU_COMMIT_COUNT=$(git rev-list --count HEAD 2>/dev/null || echo "1")
-echo "   KSU commit count: $KSU_COMMIT_COUNT → KSU_VERSION=$(( 30000 + KSU_COMMIT_COUNT ))"
+git fetch --tags 2>/dev/null || true
+KSU_VERSION=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' | sed 's/-legacy-susfs//')
+[ -z "$KSU_VERSION" ] && KSU_VERSION="unknown"
+echo "   KSU-Next version: $KSU_VERSION"
 popd > /dev/null
 
-# Set up driver symlink (same as setup.sh)
-if [ ! -L "drivers/kernelsu" ]; then
-    echo "   Creating drivers/kernelsu symlink..."
-    ln -sf "../KernelSU-Next/kernel" "drivers/kernelsu"
-fi
-
-# Ensure Makefile and Kconfig include kernelsu
+# Driver symlink
+[ -L "drivers/kernelsu" ] || ln -sf "../KernelSU-Next/kernel" "drivers/kernelsu"
 grep -q "kernelsu" drivers/Makefile 2>/dev/null || \
     printf '\nobj-$(CONFIG_KSU) += kernelsu/\n' >> drivers/Makefile
-
 grep -q 'source "drivers/kernelsu/Kconfig"' drivers/Kconfig 2>/dev/null || \
     sed -i '/endmenu/i\source "drivers/kernelsu/Kconfig"' drivers/Kconfig
 
-echo "   ✅ KernelSU-Next integrated."
+# Do NOT bypass manager signature check — doing so causes random apps
+# (e.g. accessibility services) to be crowned as the KSU manager.
 
-# ── 4. Bypass signature check ──────────────────────────
-# The legacy_susfs branch validates the manager APK via a baked-in hash.
-# Bypass this so any compatible KSU-Next manager works.
-echo "🔓 Bypassing manager signature check..."
-if grep -q "return check_v2_signature" KernelSU-Next/kernel/apk_sign.c; then
-    sed -i 's/return check_v2_signature(path, EXPECTED_MANAGER_SIZE, EXPECTED_MANAGER_HASH);/return true;/g' \
-        KernelSU-Next/kernel/apk_sign.c
-    echo "   ✅ Signature check bypassed."
-else
-    echo "   ℹ️  Already patched."
+# ── 4. Patch kernel source ─────────────────────────────
+echo "Patching kernel source..."
+
+# Install SUSFS source files (official NothingOSS source doesn't have them)
+if [ ! -f "include/linux/susfs.h" ]; then
+    cp "$BUILD_DIR/configs/susfs/include/linux/susfs.h" include/linux/susfs.h
+    cp "$BUILD_DIR/configs/susfs/include/linux/susfs_def.h" include/linux/susfs_def.h
+    cp "$BUILD_DIR/configs/susfs/susfs.c" fs/susfs.c
+    grep -q "susfs.o" fs/Makefile || echo 'obj-$(CONFIG_KSU_SUSFS) += susfs.o' >> fs/Makefile
+    echo "   SUSFS source files installed"
 fi
 
-# ── 5. Patch kernel source ─────────────────────────────
-echo "🔧 Patching kernel source..."
-
-# Add missing SUSFS defines and declarations for legacy_susfs compat
+# SUSFS compat: add missing defines and stubs
 if ! grep -q "DEFAULT_SUS_MNT_ID" include/linux/susfs_def.h; then
     printf '\n#define DEFAULT_SUS_MNT_ID 100000\n' >> include/linux/susfs_def.h
-    echo "   ✅ Added DEFAULT_SUS_MNT_ID to susfs_def.h"
 fi
 if ! grep -q "susfs_add_try_umount" include/linux/susfs.h; then
     sed -i '/^void susfs_init/i \
 \n/* legacy_susfs compat */\n#ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT\nvoid susfs_add_try_umount(void __user **user_info);\nvoid susfs_try_umount(uid_t uid);\nvoid susfs_try_umount_all(uid_t uid);\n#endif' include/linux/susfs.h
-    echo "   ✅ Added compat declarations to susfs.h"
 fi
 if ! grep -q "susfs_try_umount" fs/susfs.c; then
     cat >> fs/susfs.c << 'STUBS'
 
-/* Stubs for KernelSU-Next legacy_susfs branch compat */
 #ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT
 void susfs_add_try_umount(void __user **user_info) {}
 void susfs_try_umount(uid_t uid) {}
 void susfs_try_umount_all(uid_t uid) {}
 #endif
 STUBS
-    echo "   ✅ SUSFS compat stubs added."
 fi
 
-# Disable PINCTRL_WCD and PINCTRL_LPI — they need internal pinctrl
-# headers not available when building in-tree (designed as out-of-tree DLKMs)
+# Prevent KSU Kbuild from patching struct seccomp (breaks vendor module ABI).
+# The Kbuild checks for "filter_count" in seccomp.h — a comment satisfies the
+# grep without changing the struct layout.
+if ! grep -q "filter_count" include/linux/seccomp.h; then
+    sed -i '/int mode;/a\\t/* atomic_t filter_count; -- not on 5.4, guarded in KSU driver */' \
+        include/linux/seccomp.h
+fi
+# Guard the actual access in app_profile.c
+if grep -q 'atomic_set(&current->seccomp.filter_count, 0);' KernelSU-Next/kernel/app_profile.c; then
+    sed -i 's|atomic_set(&current->seccomp.filter_count, 0);|/* filter_count not available on 5.4 */|' \
+        KernelSU-Next/kernel/app_profile.c
+fi
+
+# Disable PINCTRL_WCD/LPI (incomplete struct pinctrl_dev prevents in-tree build)
 sed -i 's/^export CONFIG_PINCTRL_WCD=m/# export CONFIG_PINCTRL_WCD=m/' \
     techpack/audio/config/lahainaauto.conf
 sed -i 's/^export CONFIG_PINCTRL_LPI=m/# export CONFIG_PINCTRL_LPI=m/' \
@@ -205,19 +188,21 @@ sed -i 's/^#define CONFIG_PINCTRL_WCD 1/\/\/ #define CONFIG_PINCTRL_WCD 1/' \
     techpack/audio/config/lahainaautoconf.h
 sed -i 's/^#define CONFIG_PINCTRL_LPI 1/\/\/ #define CONFIG_PINCTRL_LPI 1/' \
     techpack/audio/config/lahainaautoconf.h
-echo "   ✅ PINCTRL_WCD and PINCTRL_LPI disabled (not buildable in-tree)."
 
-# ── 6. Build Kernel ─────────────────────────────────────
+# Suppress -dirty suffix
+echo "-g$(git rev-parse --short=12 HEAD)" > .scmversion
+echo "   All patches applied"
+
+# ── 5. Build Kernel ─────────────────────────────────────
 echo ""
-echo "🏗️  Building kernel..."
+echo "Building kernel..."
 
-VERSION=$(cat VERSION | tr -d '\n')
-PATCHLEVEL=$(cat PATCHLEVEL 2>/dev/null | tr -d '\n' || echo "0")
-FULL_VERSION="v${VERSION}.${PATCHLEVEL}"
-echo "   Kernel version: $FULL_VERSION"
+VERSION=$(grep '^VERSION' Makefile | head -1 | awk '{print $3}')
+PATCHLEVEL=$(grep '^PATCHLEVEL' Makefile | head -1 | awk '{print $3}')
+SUBLEVEL=$(grep '^SUBLEVEL' Makefile | head -1 | awk '{print $3}')
+KERNEL_VER="${VERSION}.${PATCHLEVEL}.${SUBLEVEL}"
 
 if command -v ccache &>/dev/null; then
-    echo "   ccache found — enabling."
     export CCACHE_COMPRESS=1 CCACHE_DIR="${HOME}/.ccache" CCACHE_MAXSIZE="50G"
     CC_CMD="ccache clang"
 else
@@ -232,106 +217,141 @@ MAKE_PARAMS=(
     LLVM=1
     LLVM_IAS=1
     CROSS_COMPILE="$CLANG_DIR/bin/llvm-"
-    LOCALVERSION="-qgki"
 )
 
 mkdir -p "$OUTPUT_DIR" "$RAW_DIR"
 
-echo "   Generating defconfig..."
 make "${MAKE_PARAMS[@]}" "$DEFCONFIG" || die "Defconfig failed"
-
-echo "   Building with $(nproc --all) threads..."
 make -j$(nproc --all) "${MAKE_PARAMS[@]}" || die "Kernel build failed"
 
-echo "✅ Kernel build complete."
+echo "Kernel build complete ($KERNEL_VER)"
 
-# ── 7. Repack boot.img ──────────────────────────────────
+# ── 6. Repack boot.img ──────────────────────────────────
 echo ""
-echo "📦 Repacking boot.img..."
+echo "Repacking boot.img..."
 
 LATEST_TAG=$(curl -sf https://api.github.com/repos/spike0en/nothing_archive/releases \
     | grep -oP '"tag_name": "\KSpacewar_[^"]+' | head -n 1)
-[ -z "$LATEST_TAG" ] && LATEST_TAG="Spacewar_V3.2-251219-1652"
+[ -z "$LATEST_TAG" ] && LATEST_TAG="$STOCK_BOOT_TAG"
 
-echo "   Stock boot tag: $LATEST_TAG"
 DOWNLOAD_URL="https://github.com/spike0en/nothing_archive/releases/download/${LATEST_TAG}/${LATEST_TAG}-image-boot.7z"
 curl -L "$DOWNLOAD_URL" -o image-boot.7z || true
 
 if [ ! -s "image-boot.7z" ]; then
-    LATEST_TAG="Spacewar_V3.2-251219-1652"
+    LATEST_TAG="$STOCK_BOOT_TAG"
     curl -L "https://github.com/spike0en/nothing_archive/releases/download/${LATEST_TAG}/${LATEST_TAG}-image-boot.7z" -o image-boot.7z
 fi
 [ -s "image-boot.7z" ] || die "Could not download stock boot image"
 
 7z x -y image-boot.7z
-EXTRACTED_BOOT=$(find . -maxdepth 2 -name "boot.img" ! -path "./AnyKernel3/*" | head -1)
+STOCK_BOOT=$(find . -maxdepth 2 -name "boot.img" ! -path "./AnyKernel3/*" | head -1)
 rm -f image-boot.7z
 
-cp "$EXTRACTED_BOOT" "$BOOT_EDITOR_DIR/boot.img"
-pushd "$BOOT_EDITOR_DIR" > /dev/null
-./gradlew unpack
-cp "$RAW_DIR/arch/arm64/boot/Image" build/unzip_boot/kernel
-./gradlew pack
-[ -f boot.img.signed ] && cp boot.img.signed "$OUTPUT_DIR/boot.img" \
-    || cp boot.img "$OUTPUT_DIR/boot.img" 2>/dev/null \
-    || die "No repacked image found"
-popd > /dev/null
+# Extract stock ramdisk byte-exact (no decompression — preserves cpio integrity)
+python3 -c "
+import struct
+with open('$STOCK_BOOT','rb') as f:
+    f.read(8); ks=struct.unpack('<I',f.read(4))[0]; rs=struct.unpack('<I',f.read(4))[0]
+    off=4096+((ks+4095)//4096)*4096; f.seek(off)
+    open('$OUTPUT_DIR/stock_ramdisk.gz','wb').write(f.read(rs))
+print(f'   Stock ramdisk: {rs} bytes (byte-exact)')
+"
 
-echo "✅ boot.img repacked."
+# Build boot.img with mkbootimg directly (boot editor corrupts ramdisk)
+MKBOOTIMG="$BOOT_EDITOR_DIR/aosp/system/tools/mkbootimg/mkbootimg.py"
+AVBTOOL="$BOOT_EDITOR_DIR/aosp/avb/avbtool.v1.2.py"
 
-# ── 8. Package AnyKernel3 ZIP ────────────────────────────
+python3 "$MKBOOTIMG" \
+    --header_version 3 \
+    --kernel "$RAW_DIR/arch/arm64/boot/Image" \
+    --ramdisk "$OUTPUT_DIR/stock_ramdisk.gz" \
+    --os_version 11.0.0 \
+    --os_patch_level 2025-05 \
+    --output "$OUTPUT_DIR/boot.img" || die "mkbootimg failed"
+
+python3 "$AVBTOOL" add_hash_footer \
+    --image "$OUTPUT_DIR/boot.img" \
+    --partition_size $BOOT_PARTITION_SIZE \
+    --partition_name boot \
+    --hash_algorithm sha256 \
+    --algorithm NONE \
+    --salt 13f0b0127083a4a62c8897ee82ac3e0099f015d997031ef05fe759a8adf28f65 || die "avbtool failed"
+
+rm -f "$OUTPUT_DIR/stock_ramdisk.gz"
+echo "boot.img repacked (stock: $LATEST_TAG)"
+
+# ── 7. Package AnyKernel3 ZIP ────────────────────────────
 echo ""
-echo "📁 Packaging..."
+echo "Packaging AnyKernel3 zip..."
 
-DATE=$(date +'%Y%m%d%H%M')
-ZIP_NAME="Uo_Spacewar_Kernel_${FULL_VERSION}_${DATE}.zip"
+# Detect NOS version from stock tag (e.g. "3.2" from "Spacewar_V3.2-251219-1652")
+OS_VERSION=$(echo "$LATEST_TAG" | grep -oP 'V\K[0-9]+\.[0-9]+' || echo "3.2")
+
+ZIP_NAME="Spacewar_NOS${OS_VERSION}_KernelSU-Next_v${KSU_VERSION}_$(date +'%Y%m%d%H%M').zip"
 
 [ -d "AnyKernel3" ] || git clone "$AK3_REPO" -b "$AK3_BRANCH" AnyKernel3
 
 cp "$RAW_DIR/arch/arm64/boot/Image" AnyKernel3/
+
+# DTBs
 if ls "$RAW_DIR/arch/arm64/boot/dts/vendor/qcom/"*.dtb &>/dev/null; then
     cat "$RAW_DIR/arch/arm64/boot/dts/vendor/qcom/"*.dtb > AnyKernel3/dtb
+elif ls "$RAW_DIR/arch/arm64/boot/dts/qcom/"*.dtb &>/dev/null; then
+    cat "$RAW_DIR/arch/arm64/boot/dts/qcom/"*.dtb > AnyKernel3/dtb
 fi
-if ls "$RAW_DIR/arch/arm64/boot/dts/vendor/qcom/"*.dtbo &>/dev/null; then
-    python3 scripts/mkdtboimg.py create AnyKernel3/dtbo.img \
-        --page_size=4096 "$RAW_DIR/arch/arm64/boot/dts/vendor/qcom/"*.dtbo
-fi
+
+# Package vendor kernel modules
+KREL=$(cat "$RAW_DIR/include/config/kernel.release")
+MODDIR="AnyKernel3/modules/vendor/lib/modules/${KREL}"
+mkdir -p "$MODDIR"
+find "$RAW_DIR" -name "*.ko" -exec cp {} "$MODDIR/" \;
+
+# modules.load
+MODLOAD="$MODDIR/modules.load"
+: > "$MODLOAD"
+for m in llcc_perfmon rdbg fts_tp goodix_fp \
+         slimbus slimbus-ngd \
+         apr_dlkm q6_pdr_dlkm q6_notifier_dlkm q6_dlkm adsp_loader_dlkm \
+         swr_dlkm snd_event_dlkm swr_ctrl_dlkm native_dlkm \
+         wcd_core_dlkm wcd9xxx_dlkm mbhc_dlkm bolero_cdc_dlkm \
+         wsa_macro_dlkm va_macro_dlkm tx_macro_dlkm rx_macro_dlkm \
+         wcd937x_slave_dlkm wcd937x_dlkm wcd938x_slave_dlkm wcd938x_dlkm \
+         wsa883x_dlkm tfa98xx_dlkm \
+         swr_dmic_dlkm swr_haptics_dlkm stub_dlkm hdmi_dlkm \
+         platform_dlkm machine_dlkm \
+         btpower bt_fm_slim qcom_edac hid-aksys nothing_stability_test \
+         camera msm_drm radio-i2c-rtc6226-qca; do
+    [ -f "$MODDIR/${m}.ko" ] && echo "${m}.ko" >> "$MODLOAD"
+done
+for ko in "$MODDIR/"*.ko; do
+    bn=$(basename "$ko")
+    grep -qx "$bn" "$MODLOAD" || echo "$bn" >> "$MODLOAD"
+done
+
+# modules.dep
+: > "$MODDIR/modules.dep"
+for ko in "$MODDIR/"*.ko; do
+    echo "/vendor/lib/modules/$(basename "$ko"):" >> "$MODDIR/modules.dep"
+done
+
+NMOD=$(find "$MODDIR" -name "*.ko" | wc -l)
+echo "   $NMOD modules packaged"
+
+# Enable module installation
+sed -i 's/do\.modules=0/do.modules=1/' AnyKernel3/anykernel.sh
 
 cd AnyKernel3
 zip -r9 "$OUTPUT_DIR/$ZIP_NAME" ./* -x .git README.md '*placeholder*'
 cd "$KERNEL_ROOT"
 
-# ── 9. Metadata ──────────────────────────────────────────
-DATE_DISPLAY=$(date +'%Y-%m-%d %H:%M')
-{
-    echo "Unofficial Spacewar Kernel ${FULL_VERSION}"
-    echo "Date: ${DATE_DISPLAY}"
-    echo "- KernelSU-Next (${KSU_BRANCH}) + SUSFS v2.0.0"
-    echo "- Built against stock: ${LATEST_TAG}"
-    echo ""
-    cat ChangeLog.txt 2>/dev/null || true
-} > ChangeLog.txt.new
-mv ChangeLog.txt.new ChangeLog.txt
-
-if [ -f "kernel-downloads.json" ] && command -v jq &>/dev/null; then
-    ZIP_SHA1=$(sha1sum "$OUTPUT_DIR/$ZIP_NAME" | awk '{print $1}')
-    jq --arg date "$(date +'%Y-%m-%d')" --arg version "5.4.289-${FULL_VERSION}" --arg sha1 "$ZIP_SHA1" \
-        '.kernel.date = $date | .kernel.version = $version | .kernel.sha1 = $sha1' \
-        kernel-downloads.json > temp.json && mv temp.json kernel-downloads.json
-fi
-
 # ── Done ─────────────────────────────────────────────────
 echo ""
-echo "✅ DONE! Build completed in $((SECONDS / 60))m $((SECONDS % 60))s"
+echo "DONE! Build completed in $((SECONDS / 60))m $((SECONDS % 60))s"
 echo ""
 echo "Artifacts in $OUTPUT_DIR/:"
-echo "  - $ZIP_NAME"
 echo "  - boot.img"
+echo "  - $ZIP_NAME"
 echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "  ⚠️  boot.img built against stock: $LATEST_TAG"
-echo "     Only flash on a device running that firmware."
-echo ""
-echo "  📱 Install a KernelSU-Next manager (spoofed recommended):"
-echo "     https://github.com/rifsxd/KernelSU-Next/releases"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  KernelSU-Next: v${KSU_VERSION} (${KSU_BRANCH})"
+echo "  Kernel: ${KERNEL_VER}"
+echo "  Stock boot: ${LATEST_TAG}"
