@@ -227,7 +227,7 @@ STUBS
         uses: actions/cache/restore@v4
         with:
           path: output/rawfiles
-          key: kernel-build-v1
+          key: kernel-build-v2
 
       - name: Build kernel
         if: steps.cache-build.outputs.cache-hit != 'true'
@@ -262,7 +262,7 @@ STUBS
         uses: actions/cache/save@v4
         with:
           path: output/rawfiles
-          key: kernel-build-v1
+          key: kernel-build-v2
 
       # ── Detect OS version from stock boot tag ───────────────
       - name: Detect stock OS version
