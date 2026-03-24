@@ -189,13 +189,17 @@ jobs:
           KERNEL_DIR="$GITHUB_WORKSPACE/android_kernel_msm-5.4_nothing_sm7325"
           cd "$KERNEL_DIR"
 
-          # Add stubs for functions upstream legacy_susfs calls but
-          # zerofrip's SUSFS v2.0.0 doesn't implement
+          # Add missing SUSFS defines and stubs for legacy_susfs compat
+          if ! grep -q "DEFAULT_SUS_MNT_ID" include/linux/susfs_def.h; then
+            printf '\n#define DEFAULT_SUS_MNT_ID 100000\n' >> include/linux/susfs_def.h
+            echo "Added DEFAULT_SUS_MNT_ID to susfs_def.h"
+          fi
           if ! grep -q "susfs_try_umount" fs/susfs.c; then
             printf '\n/* Stubs for KernelSU-Next legacy_susfs branch compat */\n' >> fs/susfs.c
             printf '#ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT\n' >> fs/susfs.c
             printf 'void susfs_add_try_umount(void __user **user_info) {}\n' >> fs/susfs.c
             printf 'void susfs_try_umount(uid_t uid) {}\n' >> fs/susfs.c
+            printf 'void susfs_try_umount_all(uid_t uid) {}\n' >> fs/susfs.c
             printf '#endif\n' >> fs/susfs.c
             printf '#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT\n' >> fs/susfs.c
             printf 'void susfs_reorder_mnt_id(void) {}\n' >> fs/susfs.c

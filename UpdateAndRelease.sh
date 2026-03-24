@@ -172,21 +172,22 @@ fi
 # ── 5. Patch kernel source ─────────────────────────────
 echo "🔧 Patching kernel source..."
 
-# Add stubs for functions upstream legacy_susfs calls but
-# zerofrip's SUSFS v2.0.0 doesn't implement
+# Add missing SUSFS defines and stubs for legacy_susfs compat
+if ! grep -q "DEFAULT_SUS_MNT_ID" include/linux/susfs_def.h; then
+    printf '\n#define DEFAULT_SUS_MNT_ID 100000\n' >> include/linux/susfs_def.h
+    echo "   ✅ Added DEFAULT_SUS_MNT_ID to susfs_def.h"
+fi
 if ! grep -q "susfs_try_umount" fs/susfs.c; then
     cat >> fs/susfs.c << 'STUBS'
 
 /* Stubs for KernelSU-Next legacy_susfs branch compat */
 #ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT
-void susfs_add_try_umount(void __user **user_info) {
-}
-void susfs_try_umount(uid_t uid) {
-}
+void susfs_add_try_umount(void __user **user_info) {}
+void susfs_try_umount(uid_t uid) {}
+void susfs_try_umount_all(uid_t uid) {}
 #endif
 #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-void susfs_reorder_mnt_id(void) {
-}
+void susfs_reorder_mnt_id(void) {}
 #endif
 STUBS
     echo "   ✅ SUSFS compat stubs added."
