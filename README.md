@@ -23,7 +23,10 @@ Grab the latest release from the [Releases](https://github.com/dracediax/Spacewa
    ```
    fastboot flash boot boot.img
    ```
-   Or flash `Spacewar_NOS3.2_KernelSU-Next_v*.zip` via custom recovery.
+   Or flash `Spacewar_NOS3.2_KernelSU-Next_v*.zip` via custom recovery, or with a kernel manager app (Franco Kernel Manager, SmartPack) if already rooted.
+
+   > **Need temporary root?** Grab a Magisk-patched boot.img for your NOS version from the
+   > [XDA Nothing Phone 1 repo](https://xdaforums.com/t/nothing-phone-1-repo-nos-ota-img-guide-root.4464039/#post-87101175) — make sure to pick the correct firmware version.
 3. Install [KernelSU-Next Manager](https://github.com/rifsxd/KernelSU-Next/releases)
 
 ## Build Locally
