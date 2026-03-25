@@ -1,4 +1,11 @@
-<h1 align="center">Nothing Phone (1) — Kernel Builder</h1>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Nothing.svg/200px-Nothing.svg.png">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Nothing.svg/200px-Nothing.svg.png" width="140" alt="Nothing">
+  </picture>
+</p>
+
+<h1 align="center">Phone (1) — Kernel Builder</h1>
 
 <p align="center">
   <strong>Automatic & custom kernel builds with KernelSU-Next · SUSFS · full root hiding</strong>
