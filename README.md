@@ -72,9 +72,36 @@ Install HMA-OSS on your device. Then activate it:
 5. Enable the module and check **System Framework** in the scope
 6. **Reboot.**
 
-HMA-OSS should now show "System service is running" — you can configure which apps to hide from in the HMA-OSS app.
+HMA-OSS should now show "Module Activated" and "System service running".
 
-> **Note:** A detailed HMA-OSS configuration guide will be added soon.
+### 5. Configure HMA-OSS
+
+You can either restore a config backup or set it up manually per app.
+
+**Option A — Restore a config backup:**
+
+1. Open HMA-OSS → tap **Restore config** at the bottom
+2. Select a previously exported `.json` config file from your downloads
+
+**Option B — Manual per-app setup:**
+
+1. Open HMA-OSS → tap **Manage apps**
+2. Select the app you want to hide root from (e.g. a banking app, Duck Detector, etc.)
+3. Toggle **Enable hide** ON
+4. Tap **Template config** → select a template (e.g. "HIDE MY CUSTOM APP")
+5. Go back and tap **Using X presets** → check all relevant categories:
+   - Custom ROM apps
+   - Detector/Checker apps
+   - Root managers/Rooted apps
+   - Shizuku/Dhizuku apps
+   - Suspicious apps
+   - LSPosed/Xposed modules
+6. Tap **Using X settings presets** → check:
+   - Accessibility
+   - Developer options
+   - Input method
+
+Repeat for each app you want to hide root from. No reboot needed after configuring apps — changes take effect immediately.
 
 ## Build Locally
 
