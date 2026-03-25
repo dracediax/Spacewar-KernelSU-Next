@@ -83,8 +83,28 @@ Install modules **in order** through the KernelSU-Next manager.<br>
 |:----:|--------|----------|
 | **1** | SUSFS for KSU | [📥 Latest release](https://github.com/sidex15/susfs4ksu-module/releases) |
 | **2** | ReZygisk | [📥 Latest release](https://github.com/PerformanC/ReZygisk/releases) |
-| **3** | DM-Verity Props Spoof | [📥 v1.0](https://github.com/dracediax/Spacewar-KernelSU-Next/releases/latest/download/dmverity-props-spoof-v1.1.zip) |
+| **3** | DM-Verity Props Spoof | [📥 v1.1](https://github.com/dracediax/Spacewar-KernelSU-Next/releases/latest/download/dmverity-props-spoof-v1.1.zip) |
 | **4** | LSPosed IT | [📥 v1.9.2-7455](https://github.com/dracediax/Spacewar-KernelSU-Next/releases/latest/download/LSPosed-v1.9.2-it-7455-release.zip) ⚠️ **Only this version works** |
+
+### Configure SUSFS
+
+Open the **susfs4ksu** module settings (KSU manager → Modules → susfs4ksu → action button):
+
+**Main toggles:**
+- ✅ Hide sus mounts for all non-su processes
+- ✅ Auto try umount (userspace)
+
+**Custom SUSFS settings:**
+- ✅ Spoof cmdline
+- ✅ Hide KSU loop
+- ✅ AVC log spoofing
+- ✅ Spoof kernel version → set to `5.4.289-qgki-g0297a1324ba1`
+- ✅ Spoof kernel build → tap **Set Stock Kernel Build Date**
+- ✅ Spoof on boot / Execute on post-fs-data
+
+Then tap **Make it sus** and reboot.
+
+> The kernel version string is printed after every build. Use it for the spoof value.
 
 ### Activate HMA-OSS
 
@@ -94,7 +114,7 @@ Install modules **in order** through the KernelSU-Next manager.<br>
 2. In LSPosed → **Modules** → **HMA-OSS** → enable → check **System Framework**
 3. **⟳ Reboot**
 
-### Import Config
+### Import HMA-OSS Config
 
 > Download [`HMA-OSS_config.json`](https://github.com/dracediax/Spacewar-KernelSU-Next/releases/latest/download/HMA-OSS_config.json) to your phone.
 

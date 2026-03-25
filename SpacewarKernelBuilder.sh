@@ -544,6 +544,13 @@ echo "Artifacts in $OUTPUT_DIR/:"
 echo "  - boot.img"
 echo "  - $ZIP_NAME"
 echo ""
+KREL=$(cat "$RAW_DIR/include/config/kernel.release" 2>/dev/null || echo "${KERNEL_VER}-qgki")
+
 echo "  KernelSU-Next: v${KSU_VERSION} (${KSU_BRANCH})"
 echo "  Kernel: ${KERNEL_VER}"
 echo "  Stock boot: ${LATEST_TAG}"
+echo ""
+echo "  ┌─ For SUSFS uname spoof ─────────────────────┐"
+echo "  │ Kernel version:  ${KREL}"
+echo "  │ Kernel build:    Use 'Set Stock Kernel Build Date'"
+echo "  └──────────────────────────────────────────────┘"
