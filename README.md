@@ -23,7 +23,7 @@
 ---
 
 <p align="center">
-  <a href="#-quick-start"><b>📦 Quick Start</b></a>&nbsp;&nbsp;·&nbsp;&nbsp;<a href="#-root-hiding-setup"><b>🔒 Root Hiding</b></a>&nbsp;&nbsp;·&nbsp;&nbsp;<a href="#%EF%B8%8F-build-from-source"><b>🛠️ Build From Source</b></a>
+  <a href="#-quick-start"><b>📦 Quick Start</b></a>&nbsp;&nbsp;·&nbsp;&nbsp;<a href="#-root-hiding-setup"><b>🔒 Root Hiding</b></a>&nbsp;&nbsp;·&nbsp;&nbsp;<a href="#%EF%B8%8F-custom-build-from-source"><b>🛠️ Custom Build</b></a>
 </p>
 
 ---
@@ -104,7 +104,7 @@ Install modules **in order** through the KernelSU-Next manager.<br>
 
 ---
 
-## 🛠️ Build From Source
+## 🛠️ Custom Build From Source
 
 ```bash
 git clone https://github.com/dracediax/Spacewar-KernelSU-Next.git
