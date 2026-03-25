@@ -1071,10 +1071,77 @@ void susfs_add_try_umount(void __user **user_info) {
 }
 #endif
 
-/* try_umount (stub for KernelSU-Next legacy_susfs setuid_hook compat) */
+/* try_umount: unmount KSU overlays for non-root processes */
 #ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT
+#include <linux/mount.h>
+#include <linux/path.h>
+#include <linux/namei.h>
+#include <linux/task_work.h>
+
+extern struct cred *ksu_cred;
+extern bool ksu_module_mounted;
+extern bool ksu_kernel_umount_enabled;
+extern bool ksu_uid_should_umount(uid_t uid);
+extern struct list_head mount_list;
+extern struct rw_semaphore mount_list_lock;
+
+struct susfs_umount_tw {
+	struct callback_head cb;
+};
+
+static void susfs_umount_tw_func(struct callback_head *cb)
+{
+	struct susfs_umount_tw *tw = container_of(cb, struct susfs_umount_tw, cb);
+	struct mount_entry {
+		char *umountable;
+		unsigned int flags;
+		struct list_head list;
+	};
+
+	if (!ksu_cred) {
+		kfree(tw);
+		return;
+	}
+
+	const struct cred *saved = override_creds(ksu_cred);
+	struct mount_entry *entry;
+	down_read(&mount_list_lock);
+	list_for_each_entry(entry, &mount_list, list) {
+		struct path path;
+		int err = kern_path(entry->umountable, 0, &path);
+		if (err)
+			continue;
+		if (path.dentry != path.mnt->mnt_root) {
+			path_put(&path);
+			continue;
+		}
+#ifdef KSU_HAS_PATH_UMOUNT
+		path_umount(&path, entry->flags);
+#else
+		path_put(&path);
+#endif
+	}
+	up_read(&mount_list_lock);
+	revert_creds(saved);
+	kfree(tw);
+}
+
 void susfs_try_umount(uid_t uid) {
-	SUSFS_LOGI("susfs_try_umount is not implemented in SUSFS v2.0.0\n");
+	struct susfs_umount_tw *tw;
+
+	if (!ksu_module_mounted || !ksu_kernel_umount_enabled || !ksu_cred)
+		return;
+
+	if (!ksu_uid_should_umount(uid))
+		return;
+
+	tw = kzalloc(sizeof(*tw), GFP_ATOMIC);
+	if (!tw)
+		return;
+
+	tw->cb.func = susfs_umount_tw_func;
+	if (task_work_add(current, &tw->cb, true))
+		kfree(tw);
 }
 #endif
 
