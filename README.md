@@ -23,7 +23,7 @@
 ---
 
 <p align="center">
-  <a href="#-quick-start"><b>📦 Quick Start</b></a>&nbsp;&nbsp;·&nbsp;&nbsp;<a href="#-root-hiding-setup"><b>🔒 Root Hiding</b></a>&nbsp;&nbsp;·&nbsp;&nbsp;<a href="#%EF%B8%8F-custom-build-from-source"><b>🛠️ Custom Build</b></a>
+  <a href="#-quick-start"><b>📦 Quick Start</b></a>&nbsp;&nbsp;·&nbsp;&nbsp;<a href="#-root-hiding-setup"><b>🔒 Root Hiding</b></a>&nbsp;&nbsp;·&nbsp;&nbsp;<a href="#%EF%B8%8F-pass-strong-play-integrity"><b>🛡️ Play Integrity</b></a>&nbsp;&nbsp;·&nbsp;&nbsp;<a href="#%EF%B8%8F-custom-build-from-source"><b>🛠️ Custom Build</b></a>
 </p>
 
 ---
@@ -100,7 +100,52 @@ Install modules **in order** through the KernelSU-Next manager.<br>
 1. Open HMA-OSS — confirm **"Module Activated"** and **"System service running"**
 2. Tap **Restore config** → select the downloaded file
 
-✅ **Done** — root is hidden.
+✅ **Done** — root is hidden from common detection apps.
+
+<details>
+<summary><strong>Manually hide a specific app</strong></summary>
+
+<br>
+
+If an app isn't covered by the config, you can add it manually:
+
+1. Open HMA-OSS → **Manage apps**
+2. Find and tap the app you want to hide root from
+3. Toggle **Enable hide** ON
+4. **Template config** → enable **HIDE MY CUSTOM APP**
+5. **Using presets** → check all 6:
+   - Custom ROM apps · Detector/Checker apps · Root managers/Rooted apps
+   - Shizuku/Dhizuku apps · Suspicious apps · LSPosed/Xposed modules
+6. **Settings presets** → check all 3:
+   - Accessibility · Developer options · Input method
+
+</details>
+
+---
+
+## 🛡️ Pass Strong Play Integrity
+
+Want to pass **MEETS_STRONG_INTEGRITY**? Install these modules after completing the root hiding setup above.
+
+Install **in order** through the KernelSU-Next manager. **⟳ Reboot after each one.**
+
+| Step | Module | Download |
+|:----:|--------|----------|
+| **1** | Play Integrity Fix | [📥 Latest release](https://github.com/osm0sis/PlayIntegrityFork/releases) |
+| **2** | TrickyStore | [📥 Latest release](https://github.com/KernelSU-Modules-Repo/tricky_store/releases) |
+| **3** | Tricky Addon | [📥 Latest release](https://github.com/KOWX712/Tricky-Addon-Update-Target-List/releases) |
+| **4** | YuriKey | [📥 Latest release](https://github.com/Yurii0307/yurikey/releases) |
+
+### Get Your Keybox
+
+After installing all 4 modules and rebooting:
+
+1. KernelSU-Next manager → **Modules** → **YuriKey** → tap the **action button**
+2. YuriKey fetches a valid keybox automatically — no manual setup needed
+
+> **Keeping it working:** When YuriKey gets an update, install the new version, then press the action button again to refresh the keybox.
+
+✅ **Done** — your device now passes Strong Play Integrity.
 
 ---
 
