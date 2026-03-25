@@ -83,7 +83,7 @@ Install modules **in order** through the KernelSU-Next manager.<br>
 |:----:|--------|----------|
 | **1** | SUSFS for KSU | [📥 Latest release](https://github.com/sidex15/susfs4ksu-module/releases) |
 | **2** | ReZygisk | [📥 Latest release](https://github.com/PerformanC/ReZygisk/releases) |
-| **3** | DM-Verity Props Spoof | [📥 v1.0](https://github.com/dracediax/Spacewar-KernelSU-Next/releases/latest/download/dmverity-props-spoof-v1.0.zip) |
+| **3** | DM-Verity Props Spoof | [📥 v1.0](https://github.com/dracediax/Spacewar-KernelSU-Next/releases/latest/download/dmverity-props-spoof-v1.1.zip) |
 | **4** | LSPosed IT | [📥 v1.9.2-7455](https://github.com/dracediax/Spacewar-KernelSU-Next/releases/latest/download/LSPosed-v1.9.2-it-7455-release.zip) ⚠️ **Only this version works** |
 
 ### Activate HMA-OSS
