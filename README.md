@@ -44,7 +44,7 @@ Install these modules **in order** through the KernelSU-Next manager (Modules �
 
 | # | Module | Download |
 |---|--------|----------|
-| 1 | **SUSFS for KSU** | [sidex15/susfs4ksu](https://github.com/sidex15/susfs4ksu) — branch `1.5.2+`, artifact `release-1.5.2+` |
+| 1 | **SUSFS for KSU** | [Latest release](https://github.com/sidex15/susfs4ksu-module/releases) |
 | 2 | **ReZygisk** | [Latest release](https://github.com/PerformanC/ReZygisk/releases) |
 | 3 | **LSPosed IT** | [`LSPosed-v1.9.2-it-7455`](https://github.com/dracediax/Spacewar-KernelSU-Next/releases/download/v1.0.1/LSPosed-v1.9.2-it-7455-release.zip) ⚠️ **Only this version works** |
 
@@ -53,10 +53,7 @@ Install these modules **in order** through the KernelSU-Next manager (Modules �
 After all modules are installed and you've rebooted:
 
 1. Install the **HMA-OSS** app on your phone
-2. Open a terminal (Termux or adb shell) and run:
-   ```
-   su -c 'am start -n org.lsposed.manager/.activity.MainActivity'
-   ```
+2. Open the KernelSU-Next manager → **Modules** → find **LSPosed** → tap the **action button** to open LSPosed
 3. In LSPosed → **Modules** → tap **HMA-OSS** → enable it → check **System Framework**
 4. **Reboot**
 
