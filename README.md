@@ -1,86 +1,108 @@
-# Nothing Phone (1) — Custom Kernel with Root & Root Hiding
+<p align="center">
+  <img src="https://nothing.tech/cdn/shop/files/phone-1.png" width="120" alt="Nothing Phone (1)">
+</p>
 
-Ready-to-flash kernel for **Nothing Phone (1) Spacewar** on **NOS 3.2** with full root and root hiding out of the box.
+<h1 align="center">Nothing Phone (1) — Rooted Kernel</h1>
+
+<p align="center">
+  <strong>Plug & play kernel with full root hiding for NOS 3.2</strong>
+</p>
+
+<p align="center">
+  <a href="https://github.com/dracediax/Spacewar-KernelSU-Next/releases"><img src="https://img.shields.io/github/v/release/dracediax/Spacewar-KernelSU-Next?style=for-the-badge&color=blue&label=Download" alt="Download"></a>
+  <img src="https://img.shields.io/badge/NOS-3.2-white?style=for-the-badge" alt="NOS 3.2">
+  <img src="https://img.shields.io/badge/Kernel-5.4.289-grey?style=for-the-badge" alt="Kernel">
+  <img src="https://img.shields.io/badge/KernelSU--Next-v3.1.0-green?style=for-the-badge" alt="KernelSU-Next">
+  <img src="https://img.shields.io/badge/SUSFS-v2.0.0-orange?style=for-the-badge" alt="SUSFS">
+</p>
+
+---
 
 > [!WARNING]
 > **Flash at your own risk.** Always keep a backup of your stock boot image.
 
+## ⚡ What You Get
+
+<table>
+<tr><td>🔓</td><td><strong>KernelSU-Next</strong></td><td>Modern kernel-based root</td></tr>
+<tr><td>🛡️</td><td><strong>SUSFS v2.0.0</strong></td><td>Kernel-level root hiding</td></tr>
+<tr><td>🏦</td><td><strong>Root hiding stack</strong></td><td>Pass banking apps, Play Integrity, root detectors</td></tr>
+<tr><td>📦</td><td><strong>Vendor modules</strong></td><td>Audio, camera, display, BT — all included</td></tr>
+</table>
+
 ---
 
-## What You Get
+## 🚀 Quick Start
 
-- **KernelSU-Next** — modern kernel-based root
-- **SUSFS v2.0.0** — hide root at the kernel level
-- **Full root hiding stack** — pass banking apps, Google Play Integrity, and root detectors
+### Flash the Kernel
 
----
+<details>
+<summary><strong>Option A — Fastboot (recommended)</strong></summary>
 
-## Quick Start
-
-### Step 1 — Flash the Kernel
-
-Download from the [Releases](https://github.com/dracediax/Spacewar-KernelSU-Next/releases) page.
-
-**Option A — Fastboot (recommended):**
 ```
 fastboot flash boot boot.img
 ```
 
-**Option B — Already rooted:**
+</details>
+
+<details>
+<summary><strong>Option B — Already rooted</strong></summary>
+
 Flash the `Spacewar_NOS3.2_KernelSU-Next_*.zip` via recovery or a kernel manager app.
 
-> **Need temporary root first?** Get a Magisk-patched boot.img from the
-> [XDA Nothing Phone 1 repo](https://xdaforums.com/t/nothing-phone-1-repo-nos-ota-img-guide-root.4464039/#post-87101175).
+</details>
 
-### Step 2 — Install the Manager
+<details>
+<summary><strong>Need temporary root first?</strong></summary>
 
-Install [KernelSU-Next Manager](https://github.com/KernelSU-Next/KernelSU-Next/releases) (v3.1.0+, spoofed or non-spoofed).
+Grab a Magisk-patched boot.img for your NOS version from the
+[XDA Nothing Phone 1 repo](https://xdaforums.com/t/nothing-phone-1-repo-nos-ota-img-guide-root.4464039/#post-87101175).
+
+</details>
+
+Then install [**KernelSU-Next Manager**](https://github.com/KernelSU-Next/KernelSU-Next/releases) (v3.1.0+).
 
 ---
 
-## Root Hiding Setup
+## 🔒 Root Hiding Setup
 
-Install these modules **in order** through the KernelSU-Next manager (Modules → Install from storage). **Reboot after each one.**
+Install modules **in order** through the KernelSU-Next manager.<br>
+**⟳ Reboot after each one.**
 
-| # | Module | Download |
-|---|--------|----------|
-| 1 | **SUSFS for KSU** | [Latest release](https://github.com/sidex15/susfs4ksu-module/releases) |
-| 2 | **ReZygisk** | [Latest release](https://github.com/PerformanC/ReZygisk/releases) |
-| 3 | **LSPosed IT** | [`LSPosed-v1.9.2-it-7455`](https://github.com/dracediax/Spacewar-KernelSU-Next/releases/download/v1.0.1/LSPosed-v1.9.2-it-7455-release.zip) ⚠️ **Only this version works** |
+| Step | Module | Download |
+|:----:|--------|----------|
+| **1** | SUSFS for KSU | [📥 Latest release](https://github.com/sidex15/susfs4ksu-module/releases) |
+| **2** | ReZygisk | [📥 Latest release](https://github.com/PerformanC/ReZygisk/releases) |
+| **3** | LSPosed IT | [📥 v1.9.2-7455](https://github.com/dracediax/Spacewar-KernelSU-Next/releases/download/v1.0.1/LSPosed-v1.9.2-it-7455-release.zip) ⚠️ **Only this version works** |
 
 ### Activate HMA-OSS
 
-After all modules are installed and you've rebooted:
+> Install the [HMA-OSS](https://github.com/AgeloVito/HMA-OSS) app first.
 
-1. Install the **HMA-OSS** app on your phone
-2. Open the KernelSU-Next manager → **Modules** → find **LSPosed** → tap the **action button** to open LSPosed
-3. In LSPosed → **Modules** → tap **HMA-OSS** → enable it → check **System Framework**
-4. **Reboot**
+1. KernelSU-Next manager → **Modules** → **LSPosed** → tap the **action button**
+2. In LSPosed → **Modules** → **HMA-OSS** → enable → check **System Framework**
+3. **⟳ Reboot**
 
-### Import the Config
+### Import Config
 
-Download [`HMA-OSS_config.json`](https://github.com/dracediax/Spacewar-KernelSU-Next/releases/download/v1.0.1/HMA-OSS_config.json) to your phone, then:
+> Download [`HMA-OSS_config.json`](https://github.com/dracediax/Spacewar-KernelSU-Next/releases/download/v1.0.1/HMA-OSS_config.json) to your phone.
 
-1. Open HMA-OSS — verify it shows **"Module Activated"** and **"System service running"**
-2. Tap **Restore config** at the bottom
-3. Select the downloaded `HMA-OSS_config.json`
+1. Open HMA-OSS — confirm **"Module Activated"** and **"System service running"**
+2. Tap **Restore config** → select the downloaded file
 
-Done — root is now hidden from detection apps, banking apps, and Play Integrity checks.
+✅ **Done** — root is hidden.
 
 ---
 
-## Build From Source
+## 🛠️ Build From Source
 
 ```bash
 git clone https://github.com/dracediax/Spacewar-KernelSU-Next.git
-cd Spacewar-KernelSU-Next
-chmod +x UpdateAndRelease.sh
-./UpdateAndRelease.sh
+cd Spacewar-KernelSU-Next && chmod +x UpdateAndRelease.sh && ./UpdateAndRelease.sh
 ```
 
-Everything downloads automatically on first run. Output goes to `output/`.
-
-## Sources
+<details>
+<summary>Sources</summary>
 
 | Component | Repository | Branch |
 |---|---|---|
@@ -88,12 +110,19 @@ Everything downloads automatically on first run. Output goes to `output/`.
 | KernelSU-Next | [KernelSU-Next/KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next) | `legacy_susfs` |
 | SUSFS | Patched into kernel at build time | v2.0.0 |
 | AnyKernel3 | [zerofrip/AnyKernel3](https://github.com/zerofrip/AnyKernel3) | `spacewar_nos3.0` |
-| Stock boot images | [spike0en/nothing_archive](https://github.com/spike0en/nothing_archive) | — |
+| Stock boot | [spike0en/nothing_archive](https://github.com/spike0en/nothing_archive) | — |
 
-## Credits
+</details>
 
-- **NothingOSS** — Official kernel source
-- **KernelSU-Next** — Root framework
-- **simonpunk** — SUSFS
-- **zerofrip** — AnyKernel3 config for Spacewar
-- **spike0en** — Stock boot image archive
+<details>
+<summary>Why <code>legacy_susfs</code>?</summary>
+
+The official KernelSU-Next `dev` branch dropped kernel 5.4 support. The `legacy_susfs` branch keeps native 5.4 compatibility with SELinux and seccomp support.
+
+</details>
+
+---
+
+<p align="center">
+  <strong>Credits:</strong> NothingOSS · KernelSU-Next · simonpunk (SUSFS) · zerofrip (AK3) · spike0en (boot images)
+</p>
