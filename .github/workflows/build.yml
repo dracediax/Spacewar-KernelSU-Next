@@ -450,6 +450,7 @@ jobs:
 
             ### Included extras
             - `LSPosed-v1.9.2-it-7455-release.zip` — only compatible LSPosed version
+            - `dmverity-props-spoof-v1.1.zip` — fixes partition.*.verified props
             - `HMA-OSS_config.json` — pre-made root hiding config
           files: |
             output/boot.img

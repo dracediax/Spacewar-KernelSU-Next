@@ -83,18 +83,15 @@ Install modules **in order** through the KernelSU-Next manager.<br>
 |:----:|--------|----------|
 | **1** | SUSFS for KSU | [📥 Latest release](https://github.com/sidex15/susfs4ksu-module/releases) |
 | **2** | ReZygisk | [📥 Latest release](https://github.com/PerformanC/ReZygisk/releases) |
-| **3** | DM-Verity Props Spoof | [📥 v1.1](https://github.com/dracediax/Spacewar-KernelSU-Next/releases/latest/download/dmverity-props-spoof-v1.1.zip) |
+| **3** | DM-Verity Props Spoof | [📥 v1.1](https://github.com/dracediax/Spacewar-KernelSU-Next/releases/latest/download/dmverity-props-spoof-v1.1.zip) — included in release |
 | **4** | LSPosed IT | [📥 v1.9.2-7455](https://github.com/dracediax/Spacewar-KernelSU-Next/releases/latest/download/LSPosed-v1.9.2-it-7455-release.zip) ⚠️ **Only this version works** |
 
 ### Configure SUSFS
 
-Open the **susfs4ksu** module settings (KSU manager → Modules → susfs4ksu → action button):
+Open the **susfs4ksu** module settings (KSU manager → Modules → susfs4ksu → action button) and enable:
 
-**Main toggles:**
 - ✅ Hide sus mounts for all non-su processes
 - ✅ Auto try umount (userspace)
-
-**Custom SUSFS settings:**
 - ✅ Spoof cmdline
 - ✅ Hide KSU loop
 - ✅ AVC log spoofing
