@@ -27,7 +27,54 @@ Grab the latest release from the [Releases](https://github.com/dracediax/Spacewa
 
    > **Need temporary root?** Grab a Magisk-patched boot.img for your NOS version from the
    > [XDA Nothing Phone 1 repo](https://xdaforums.com/t/nothing-phone-1-repo-nos-ota-img-guide-root.4464039/#post-87101175) — make sure to pick the correct firmware version.
-3. Install [KernelSU-Next Manager](https://github.com/rifsxd/KernelSU-Next/releases)
+3. Install [KernelSU-Next Manager](https://github.com/KernelSU-Next/KernelSU-Next/releases) (v3.1.0 or later, spoofed or non-spoofed both work)
+
+## Root Hiding Setup
+
+After flashing the kernel and installing the KernelSU-Next manager, install modules **in this order** (reboot after each):
+
+### 1. SUSFS for KSU
+
+Download from [sidex15/susfs4ksu](https://github.com/sidex15/susfs4ksu) — branch `1.5.2+`, use the `release-1.5.2+` artifact.
+
+Install via KernelSU-Next manager → Modules → Install from storage.
+
+**Reboot.**
+
+### 2. ReZygisk
+
+Download the latest release from [PerformanC/ReZygisk](https://github.com/PerformanC/ReZygisk/releases).
+
+Install via KernelSU-Next manager → Modules → Install from storage.
+
+**Reboot.**
+
+### 3. LSPosed (IT)
+
+> **Important:** Use specifically **LSPosed IT v1.9.2 (7455)** from [liviafontes/LSPosed](https://github.com/liviafontes/LSPosed/releases). Other versions may not work correctly.
+
+Install via KernelSU-Next manager → Modules → Install from storage.
+
+**Reboot.**
+
+### 4. HMA-OSS (Hide My Applist)
+
+Install HMA-OSS on your device. Then activate it:
+
+1. Open the KernelSU-Next manager
+2. Go to **Superuser** → grant root to **Shell** (if not already)
+3. Open a terminal (Termux or adb shell) and run:
+   ```
+   su -c 'am start -n org.lsposed.manager/.activity.MainActivity'
+   ```
+   This opens the LSPosed manager.
+4. Go to **Modules** → tap on **HMA-OSS**
+5. Enable the module and check **System Framework** in the scope
+6. **Reboot.**
+
+HMA-OSS should now show "System service is running" — you can configure which apps to hide from in the HMA-OSS app.
+
+> **Note:** A detailed HMA-OSS configuration guide will be added soon.
 
 ## Build Locally
 

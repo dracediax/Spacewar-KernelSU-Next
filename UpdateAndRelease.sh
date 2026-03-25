@@ -179,6 +179,18 @@ if grep -q 'atomic_set(&current->seccomp.filter_count, 0);' KernelSU-Next/kernel
         KernelSU-Next/kernel/app_profile.c
 fi
 
+# Manual reboot hook for KSU fd installation (kprobe path is disabled when SUSFS
+# is enabled, so ksud can't obtain a driver fd → version reports as 0 → modules
+# like ReZygisk refuse to install).
+if ! grep -q "ksu_handle_sys_reboot" kernel/reboot.c; then
+    sed -i '/^SYSCALL_DEFINE4(reboot,/i \
+extern int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd,\n\t\t\t\t void __user **arg);' \
+        kernel/reboot.c
+    sed -i '/struct pid_namespace \*pid_ns = task_active_pid_ns/a\\n\tksu_handle_sys_reboot(magic1, magic2, cmd, (void __user **)\&arg);' \
+        kernel/reboot.c
+    echo "   Reboot hook for KSU fd installed"
+fi
+
 # Disable PINCTRL_WCD/LPI (incomplete struct pinctrl_dev prevents in-tree build)
 sed -i 's/^export CONFIG_PINCTRL_WCD=m/# export CONFIG_PINCTRL_WCD=m/' \
     techpack/audio/config/lahainaauto.conf
