@@ -15,3 +15,4 @@ UpdateAndRelease_old.sh
 # But track release extras in MiscData
 !MiscData/LSPosed-*.zip
 !MiscData/HMA-OSS_config.json
+!MiscData/nothing_logo_white.png
