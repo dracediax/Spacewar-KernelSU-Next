@@ -263,6 +263,14 @@ jobs:
             sed -i '/struct pid_namespace \*pid_ns = task_active_pid_ns/a\\n\tksu_handle_sys_reboot(magic1, magic2, cmd, (void __user **)\&arg);' kernel/reboot.c
           fi
 
+          # Hook susfs_spoof_uname into sys_newuname
+          if ! grep -q "susfs_spoof_uname" kernel/sys.c; then
+            sed -i '/#include <linux\/utsname.h>/a\#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME\n#include <linux\/susfs.h>\n#endif' kernel/sys.c
+            sed -i '/SYSCALL_DEFINE1(newuname/{n;n;n;n;n;n;
+              /up_read(&uts_sem);/a\#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME\n\tsusfs_spoof_uname(\&tmp);\n#endif
+            }' kernel/sys.c
+          fi
+
           # Disable PINCTRL_WCD/LPI
           sed -i 's/^export CONFIG_PINCTRL_WCD=m/# export CONFIG_PINCTRL_WCD=m/' techpack/audio/config/lahainaauto.conf
           sed -i 's/^export CONFIG_PINCTRL_LPI=m/# export CONFIG_PINCTRL_LPI=m/' techpack/audio/config/lahainaauto.conf

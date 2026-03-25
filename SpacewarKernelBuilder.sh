@@ -352,6 +352,17 @@ extern int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd,\n\t\t
     echo "   Reboot hook for KSU fd installed"
 fi
 
+# Hook susfs_spoof_uname into sys_newuname (SUSFS defines the function but
+# doesn't patch the syscall — without this, uname spoofing silently does nothing)
+if ! grep -q "susfs_spoof_uname" kernel/sys.c; then
+    sed -i '/#include <linux\/utsname.h>/a\#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME\n#include <linux\/susfs.h>\n#endif' \
+        kernel/sys.c
+    sed -i '/SYSCALL_DEFINE1(newuname/{n;n;n;n;n;n;
+        /up_read(&uts_sem);/a\#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME\n\tsusfs_spoof_uname(\&tmp);\n#endif
+    }' kernel/sys.c
+    echo "   SUSFS uname spoof hook installed"
+fi
+
 # Disable PINCTRL_WCD/LPI (incomplete struct pinctrl_dev prevents in-tree build)
 sed -i 's/^export CONFIG_PINCTRL_WCD=m/# export CONFIG_PINCTRL_WCD=m/' \
     techpack/audio/config/lahainaauto.conf
