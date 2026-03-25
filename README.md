@@ -1,8 +1,4 @@
-<p align="center">
-  <img src="https://nothing.tech/cdn/shop/files/phone-1.png" width="120" alt="Nothing Phone (1)">
-</p>
-
-<h1 align="center">Nothing Phone (1) — Rooted Kernel</h1>
+<h1 align="center">⬡ Nothing Phone (1) — Rooted Kernel</h1>
 
 <p align="center">
   <strong>Plug & play kernel with full root hiding for NOS 3.2</strong>
@@ -108,41 +104,35 @@ Everything downloads automatically on first run. Output goes to `output/`.
 
 <br>
 
-You can build with a specific kernel branch or KernelSU-Next version:
+Build for your specific firmware version — just pass `--stock-tag`:
 
 ```bash
-# Use a different kernel branch
-./UpdateAndRelease.sh --kernel-branch sm7325/v/mr
+# Build for a specific firmware
+./UpdateAndRelease.sh --stock-tag Spacewar_V3.2-260206-1016
 
-# Use a specific KernelSU-Next tag
+# List all available firmware versions
+./UpdateAndRelease.sh --list-firmware
+
+# Pin a specific KernelSU-Next version
 ./UpdateAndRelease.sh --ksu-tag v3.1.0-legacy-susfs
 
-# Combine both
-./UpdateAndRelease.sh --kernel-branch sm7325/v/mr --ksu-tag v3.1.0-legacy-susfs
+# Build for NOS 2.6 (needs matching kernel branch)
+./UpdateAndRelease.sh --kernel-branch sm7325/u/mr --stock-tag Spacewar_U2.6-241031-1818
 
-# Clean build (delete old output first)
+# Clean build
 ./UpdateAndRelease.sh --clean
 ```
 
-**Kernel branches** (match your NOS version):
+**Kernel branches** — pick the one that matches your NOS version:
 
-| Branch | NOS Version | Android |
-|--------|-------------|---------|
-| `sm7325/v/mr` | **3.0 — 3.2** (latest) | 15 |
+| Branch | NOS | Android |
+|--------|-----|---------|
+| `sm7325/v/mr` | **3.0 — 3.2** (default) | 15 |
 | `sm7325/u/mr` | 2.5 — 2.6 | 14 |
 | `sm7325/t` | 1.5 — 2.0 | 13 |
 | `sm7325/s` | 1.0 — 1.1 | 12 |
 
-**Stock boot images** ([spike0en/nothing_archive](https://github.com/spike0en/nothing_archive/releases)):
-
-| NOS | Latest firmware tag |
-|-----|-----------|
-| **3.2** | `Spacewar_V3.2-260206-1016` |
-| 3.0 | `Spacewar_V3.0-250409-2129` |
-| 2.6 | `Spacewar_U2.6-241031-1818` |
-| 2.5 | `Spacewar_U2.5-240612-2149` |
-| 2.0 | `Spacewar_T2.0-231110-1731` |
-| 1.5 | `Spacewar_T1.5-230706-1942` |
+**Firmware versions** — run `./UpdateAndRelease.sh --list-firmware` for the full list, or see [spike0en/nothing_archive](https://github.com/spike0en/nothing_archive/releases).
 
 Run `./UpdateAndRelease.sh --help` for all options.
 
