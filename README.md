@@ -83,11 +83,11 @@ Install modules **in order** through the KernelSU-Next manager.<br>
 |:----:|--------|----------|
 | **1** | SUSFS for KSU | [📥 Latest release](https://github.com/sidex15/susfs4ksu-module/releases) |
 | **2** | ReZygisk | [📥 Latest release](https://github.com/PerformanC/ReZygisk/releases) |
-| **3** | LSPosed IT | [📥 v1.9.2-7455](https://github.com/dracediax/Spacewar-KernelSU-Next/releases/download/v1.0.1/LSPosed-v1.9.2-it-7455-release.zip) ⚠️ **Only this version works** |
+| **3** | LSPosed IT | [📥 v1.9.2-7455](https://github.com/dracediax/Spacewar-KernelSU-Next/releases/latest/download/LSPosed-v1.9.2-it-7455-release.zip) ⚠️ **Only this version works** |
 
 ### Activate HMA-OSS
 
-> Install the [HMA-OSS](https://github.com/AgeloVito/HMA-OSS) app first.
+> Install the [HMA-OSS](https://github.com/frknkrc44/HMA-OSS/releases) app first.
 
 1. KernelSU-Next manager → **Modules** → **LSPosed** → tap the **action button**
 2. In LSPosed → **Modules** → **HMA-OSS** → enable → check **System Framework**
@@ -95,7 +95,7 @@ Install modules **in order** through the KernelSU-Next manager.<br>
 
 ### Import Config
 
-> Download [`HMA-OSS_config.json`](https://github.com/dracediax/Spacewar-KernelSU-Next/releases/download/v1.0.1/HMA-OSS_config.json) to your phone.
+> Download [`HMA-OSS_config.json`](https://github.com/dracediax/Spacewar-KernelSU-Next/releases/latest/download/HMA-OSS_config.json) to your phone.
 
 1. Open HMA-OSS — confirm **"Module Activated"** and **"System service running"**
 2. Tap **Restore config** → select the downloaded file
