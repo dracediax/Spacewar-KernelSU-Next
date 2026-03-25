@@ -1,7 +1,9 @@
 name: Build Kernel & Release
 
 on:
-  workflow_dispatch:     # Manual trigger
+  workflow_dispatch:     # Manual trigger (always builds)
+  schedule:
+    - cron: '0 6 * * *'  # Daily at 06:00 UTC — checks for new KSU/kernel versions
   push:
     branches: [main]
     paths:
@@ -10,33 +12,75 @@ on:
       - 'SpacewarKernelBuilder/configs/**'
 
 jobs:
+  # ══════════════════════════════════════════════════════
+  # Step 1: Check if a new build is needed
+  # ══════════════════════════════════════════════════════
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.check.outputs.should_build }}
+      ksu_version: ${{ steps.check.outputs.ksu_version }}
+      ksu_commit: ${{ steps.check.outputs.ksu_commit }}
+      kernel_commit: ${{ steps.check.outputs.kernel_commit }}
+    steps:
+      - name: Check for upstream changes
+        id: check
+        run: |
+          # Get latest KSU-Next commit on legacy_susfs
+          KSU_COMMIT=$(git ls-remote https://github.com/KernelSU-Next/KernelSU-Next.git refs/heads/legacy_susfs | cut -f1 | head -c12)
+          echo "ksu_commit=$KSU_COMMIT" >> "$GITHUB_OUTPUT"
+
+          # Get latest kernel commit
+          KERNEL_COMMIT=$(git ls-remote https://github.com/NothingOSS/android_kernel_msm-5.4_nothing_sm7325.git refs/heads/sm7325/v/mr | cut -f1 | head -c12)
+          echo "kernel_commit=$KERNEL_COMMIT" >> "$GITHUB_OUTPUT"
+
+          # Get latest KSU tag
+          KSU_VERSION=$(git ls-remote --tags https://github.com/KernelSU-Next/KernelSU-Next.git | grep 'legacy-susfs$' | grep -v '\^{}' | sed 's|.*refs/tags/||' | sort -rV | head -1 | sed 's/^v//' | sed 's/-legacy-susfs//')
+          [ -z "$KSU_VERSION" ] && KSU_VERSION="unknown"
+          echo "ksu_version=$KSU_VERSION" >> "$GITHUB_OUTPUT"
+
+          BUILD_ID="ksu-${KSU_COMMIT}_kernel-${KERNEL_COMMIT}"
+          echo "Current build ID: $BUILD_ID"
+
+          # Check if a release with this exact combo already exists
+          EXISTING=$(curl -sf "https://api.github.com/repos/${{ github.repository }}/releases" \
+            | grep -o "\"body\":\"[^\"]*\"" | grep -c "$BUILD_ID" || true)
+
+          if [ "$EXISTING" -gt 0 ] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+            echo "Build $BUILD_ID already released — skipping"
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "New build needed: $BUILD_ID"
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  # ══════════════════════════════════════════════════════
+  # Step 2: Build (only if needed)
+  # ══════════════════════════════════════════════════════
   build:
+    needs: check
+    if: needs.check.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     permissions:
-      contents: write    # Needed for creating releases
+      contents: write
 
     steps:
-      # ── Free disk space (kernel builds need ~25GB) ──────────
+      # ── Free disk space ────────────────────────────────
       - name: Free disk space
         run: |
-          echo "Before cleanup:"
-          df -h /
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android \
             /opt/ghc /usr/local/share/boost /opt/hostedtoolcache
           sudo apt-get clean
-          echo "After cleanup:"
-          df -h /
 
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0    # Full history for tag detection
+          fetch-depth: 0
 
-      # ── Compute next version ────────────────────────────────
+      # ── Compute next version ───────────────────────────
       - name: Determine version
         id: version
         run: |
-          # Get latest release tag (format: v1.0.X)
           LATEST=$(git tag -l 'v1.0.*' --sort=-v:refname | head -1)
           if [ -z "$LATEST" ]; then
             NEXT="v1.0.0"
@@ -45,16 +89,15 @@ jobs:
             NEXT="v1.0.$((PATCH + 1))"
           fi
           echo "version=$NEXT" >> "$GITHUB_OUTPUT"
-          echo "Next version: $NEXT"
 
-      # ── Install dependencies ────────────────────────────────
+      # ── Install dependencies ───────────────────────────
       - name: Install build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y flex bison bc curl p7zip-full python3 jq zip \
             make git patch rsync libssl-dev libelf-dev ccache
 
-      # ── Restore caches ──────────────────────────────────────
+      # ── Restore caches ────────────────────────────────
       - name: Restore ccache
         uses: actions/cache/restore@v4
         with:
@@ -74,7 +117,8 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: SpacewarKernelBuilder/android_kernel_msm-5.4_nothing_sm7325
-          key: kernel-source-nothingoss-v1
+          key: kernel-src-${{ needs.check.outputs.kernel_commit }}
+          restore-keys: kernel-src-
 
       - name: Restore boot image editor
         id: cache-booteditor
@@ -83,18 +127,18 @@ jobs:
           path: SpacewarKernelBuilder/tc/Android_boot_image_editor
           key: boot-image-editor-v1
 
-      # ── Download on cache miss ─────────────────────────────
+      # ── Download on cache miss ─────────────────────────
       - name: Download Clang toolchain
         if: steps.cache-clang.outputs.cache-hit != 'true'
         run: |
           mkdir -p SpacewarKernelBuilder/tc/r383902b1
           curl -L "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/android11-qpr2-release/clang-r383902b1.tar.gz" \
             | tar -xz -C SpacewarKernelBuilder/tc/r383902b1
-          [ -f SpacewarKernelBuilder/tc/r383902b1/bin/clang ] || { echo "Clang download failed"; exit 1; }
 
       - name: Clone kernel source
         if: steps.cache-kernel.outputs.cache-hit != 'true'
         run: |
+          rm -rf SpacewarKernelBuilder/android_kernel_msm-5.4_nothing_sm7325
           mkdir -p SpacewarKernelBuilder
           git clone --depth 1 -b sm7325/v/mr \
             https://github.com/NothingOSS/android_kernel_msm-5.4_nothing_sm7325.git \
@@ -107,7 +151,7 @@ jobs:
           git clone --depth 1 https://github.com/cfig/Android_boot_image_editor.git \
             SpacewarKernelBuilder/tc/Android_boot_image_editor
 
-      # ── Save caches (runs even on failure) ─────────────────
+      # ── Save caches ───────────────────────────────────
       - name: Save Clang cache
         if: always() && steps.cache-clang.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
@@ -116,11 +160,12 @@ jobs:
           key: clang-r383902b1-v1
 
       - name: Save kernel source cache
-        if: always() && steps.cache-kernel.outputs.cache-hit != 'true'
+        if: always()
         uses: actions/cache/save@v4
         with:
           path: SpacewarKernelBuilder/android_kernel_msm-5.4_nothing_sm7325
-          key: kernel-source-nothingoss-v1
+          key: kernel-src-${{ needs.check.outputs.kernel_commit }}
+        continue-on-error: true
 
       - name: Save boot editor cache
         if: always() && steps.cache-booteditor.outputs.cache-hit != 'true'
@@ -137,21 +182,18 @@ jobs:
           key: ccache-kernel-${{ github.sha }}
         continue-on-error: true
 
-      # ── Copy spacewar_defconfig into kernel tree ───────────
+      # ── Setup kernel ──────────────────────────────────
       - name: Copy spacewar_defconfig
         run: |
           cp SpacewarKernelBuilder/configs/spacewar_defconfig \
             SpacewarKernelBuilder/android_kernel_msm-5.4_nothing_sm7325/arch/arm64/configs/spacewar_defconfig
-          echo "spacewar_defconfig copied"
 
-      # ── Setup KernelSU-Next ─────────────────────────────────
       - name: Setup KernelSU-Next (legacy_susfs)
         id: ksu
         run: |
           KERNEL_DIR="$GITHUB_WORKSPACE/SpacewarKernelBuilder/android_kernel_msm-5.4_nothing_sm7325"
           cd "$KERNEL_DIR"
 
-          # Clone KernelSU-Next
           if [ ! -d "KernelSU-Next/.git" ]; then
             git clone -b legacy_susfs https://github.com/KernelSU-Next/KernelSU-Next.git KernelSU-Next
           else
@@ -162,43 +204,35 @@ jobs:
             cd ..
           fi
 
-          # Unshallow and fetch tags for version detection
           cd KernelSU-Next
           git fetch --unshallow 2>/dev/null || true
           git fetch --tags 2>/dev/null || true
           KSU_VERSION=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' | sed 's/-legacy-susfs//')
           [ -z "$KSU_VERSION" ] && KSU_VERSION="unknown"
           echo "ksu_version=$KSU_VERSION" >> "$GITHUB_OUTPUT"
-          echo "KernelSU-Next version: $KSU_VERSION"
           cd ..
 
-          # Setup driver symlink
           [ -L "drivers/kernelsu" ] || ln -sf "../KernelSU-Next/kernel" "drivers/kernelsu"
           grep -q "kernelsu" drivers/Makefile || printf '\nobj-$(CONFIG_KSU) += kernelsu/\n' >> drivers/Makefile
           grep -q 'source "drivers/kernelsu/Kconfig"' drivers/Kconfig || \
             sed -i '/endmenu/i\source "drivers/kernelsu/Kconfig"' drivers/Kconfig
 
-          # Do NOT bypass signature check — causes wrong app to be crowned as manager
-
-          echo "KernelSU-Next integrated"
-
-      # ── Patch kernel source ──────────────────────────────────
+      # ── Patch kernel source ────────────────────────────
       - name: Patch kernel source
         run: |
           KERNEL_DIR="$GITHUB_WORKSPACE/SpacewarKernelBuilder/android_kernel_msm-5.4_nothing_sm7325"
           CONFIGS_DIR="$GITHUB_WORKSPACE/SpacewarKernelBuilder/configs"
           cd "$KERNEL_DIR"
 
-          # Install SUSFS source files (official NothingOSS source doesn't have them)
+          # SUSFS source files
           if [ ! -f "include/linux/susfs.h" ]; then
             cp "$CONFIGS_DIR/susfs/include/linux/susfs.h" include/linux/susfs.h
             cp "$CONFIGS_DIR/susfs/include/linux/susfs_def.h" include/linux/susfs_def.h
             cp "$CONFIGS_DIR/susfs/susfs.c" fs/susfs.c
             grep -q "susfs.o" fs/Makefile || echo 'obj-$(CONFIG_KSU_SUSFS) += susfs.o' >> fs/Makefile
-            echo "SUSFS source files installed"
           fi
 
-          # SUSFS compat: add missing defines and stubs
+          # SUSFS compat stubs
           if ! grep -q "DEFAULT_SUS_MNT_ID" include/linux/susfs_def.h; then
             printf '\n#define DEFAULT_SUS_MNT_ID 100000\n' >> include/linux/susfs_def.h
           fi
@@ -214,49 +248,29 @@ jobs:
             printf '#endif\n' >> fs/susfs.c
           fi
 
-          # Prevent KSU Kbuild from patching struct seccomp (breaks vendor module ABI)
+          # Seccomp filter_count guard
           if ! grep -q "filter_count" include/linux/seccomp.h; then
-            sed -i '/int mode;/a\\t/* atomic_t filter_count; -- not on 5.4, guarded in KSU driver */' \
-              include/linux/seccomp.h
+            sed -i '/int mode;/a\\t/* atomic_t filter_count; -- not on 5.4, guarded in KSU driver */' include/linux/seccomp.h
           fi
           if grep -q 'atomic_set(&current->seccomp.filter_count, 0);' KernelSU-Next/kernel/app_profile.c; then
-            sed -i 's|atomic_set(&current->seccomp.filter_count, 0);|/* filter_count not available on 5.4 */|' \
-              KernelSU-Next/kernel/app_profile.c
+            sed -i 's|atomic_set(&current->seccomp.filter_count, 0);|/* filter_count not available on 5.4 */|' KernelSU-Next/kernel/app_profile.c
           fi
 
-          # Manual reboot hook for KSU fd installation (kprobe path disabled when SUSFS enabled)
+          # Reboot hook for KSU fd (kprobe disabled when SUSFS enabled)
           if ! grep -q "ksu_handle_sys_reboot" kernel/reboot.c; then
             sed -i '/^SYSCALL_DEFINE4(reboot,/i \
-          extern int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd,\n\t\t\t\t void __user **arg);' \
-              kernel/reboot.c
-            sed -i '/struct pid_namespace \*pid_ns = task_active_pid_ns/a\\n\tksu_handle_sys_reboot(magic1, magic2, cmd, (void __user **)\&arg);' \
-              kernel/reboot.c
-            echo "Reboot hook for KSU fd installed"
+          extern int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd,\n\t\t\t\t void __user **arg);' kernel/reboot.c
+            sed -i '/struct pid_namespace \*pid_ns = task_active_pid_ns/a\\n\tksu_handle_sys_reboot(magic1, magic2, cmd, (void __user **)\&arg);' kernel/reboot.c
           fi
 
-          # Disable PINCTRL_WCD/LPI (incomplete struct pinctrl_dev prevents in-tree build)
-          sed -i 's/^export CONFIG_PINCTRL_WCD=m/# export CONFIG_PINCTRL_WCD=m/' \
-            techpack/audio/config/lahainaauto.conf
-          sed -i 's/^export CONFIG_PINCTRL_LPI=m/# export CONFIG_PINCTRL_LPI=m/' \
-            techpack/audio/config/lahainaauto.conf
-          sed -i 's/^#define CONFIG_PINCTRL_WCD 1/\/\/ #define CONFIG_PINCTRL_WCD 1/' \
-            techpack/audio/config/lahainaautoconf.h
-          sed -i 's/^#define CONFIG_PINCTRL_LPI 1/\/\/ #define CONFIG_PINCTRL_LPI 1/' \
-            techpack/audio/config/lahainaautoconf.h
+          # Disable PINCTRL_WCD/LPI
+          sed -i 's/^export CONFIG_PINCTRL_WCD=m/# export CONFIG_PINCTRL_WCD=m/' techpack/audio/config/lahainaauto.conf
+          sed -i 's/^export CONFIG_PINCTRL_LPI=m/# export CONFIG_PINCTRL_LPI=m/' techpack/audio/config/lahainaauto.conf
+          sed -i 's/^#define CONFIG_PINCTRL_WCD 1/\/\/ #define CONFIG_PINCTRL_WCD 1/' techpack/audio/config/lahainaautoconf.h
+          sed -i 's/^#define CONFIG_PINCTRL_LPI 1/\/\/ #define CONFIG_PINCTRL_LPI 1/' techpack/audio/config/lahainaautoconf.h
 
-          echo "All patches applied"
-
-      # ── Build kernel ────────────────────────────────────────
-      - name: Restore kernel build cache
-        id: cache-build
-        uses: actions/cache/restore@v4
-        with:
-          path: output/rawfiles
-          key: kernel-build-v3
-
+      # ── Build kernel ──────────────────────────────────
       - name: Build kernel
-        if: steps.cache-build.outputs.cache-hit != 'true'
-        id: build
         run: |
           KERNEL_DIR="$GITHUB_WORKSPACE/SpacewarKernelBuilder/android_kernel_msm-5.4_nothing_sm7325"
           CLANG_DIR="$GITHUB_WORKSPACE/SpacewarKernelBuilder/tc/r383902b1"
@@ -266,8 +280,6 @@ jobs:
 
           cd "$KERNEL_DIR"
           mkdir -p "$RAW_DIR"
-
-          # Suppress -dirty suffix from patched tree
           echo "-g$(git rev-parse --short=12 HEAD)" > .scmversion
 
           MAKE_PARAMS=(
@@ -282,31 +294,20 @@ jobs:
 
           make "${MAKE_PARAMS[@]}" spacewar_defconfig
           make -j$(nproc --all) "${MAKE_PARAMS[@]}"
-          echo "Kernel build complete"
 
-      - name: Save kernel build cache
-        if: steps.cache-build.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: output/rawfiles
-          key: kernel-build-v3
-
-      # ── Detect OS version from stock boot tag ───────────────
+      # ── Detect OS version ─────────────────────────────
       - name: Detect stock OS version
         id: os_version
         run: |
           LATEST_TAG=$(curl -sf https://api.github.com/repos/spike0en/nothing_archive/releases \
             | grep -oP '"tag_name": "\KSpacewar_[^"]+' | head -n 1)
           [ -z "$LATEST_TAG" ] && LATEST_TAG="Spacewar_V3.2-251219-1652"
-
           OS_VERSION=$(echo "$LATEST_TAG" | grep -oP 'V\K[0-9]+\.[0-9]+')
           [ -z "$OS_VERSION" ] && OS_VERSION="3.2"
-
           echo "stock_tag=$LATEST_TAG" >> "$GITHUB_OUTPUT"
           echo "os_version=$OS_VERSION" >> "$GITHUB_OUTPUT"
-          echo "Stock tag: $LATEST_TAG (NOS $OS_VERSION)"
 
-      # ── Repack boot.img ─────────────────────────────────────
+      # ── Repack boot.img ───────────────────────────────
       - name: Repack boot.img
         run: |
           KERNEL_DIR="$GITHUB_WORKSPACE/SpacewarKernelBuilder/android_kernel_msm-5.4_nothing_sm7325"
@@ -314,13 +315,9 @@ jobs:
           BOOT_EDITOR_DIR="$GITHUB_WORKSPACE/SpacewarKernelBuilder/tc/Android_boot_image_editor"
           OUTPUT_DIR="$GITHUB_WORKSPACE/output"
           LATEST_TAG="${{ steps.os_version.outputs.stock_tag }}"
-          BOOT_PARTITION_SIZE=100663296
-
           cd "$KERNEL_DIR"
 
-          # Download stock boot
-          DOWNLOAD_URL="https://github.com/spike0en/nothing_archive/releases/download/${LATEST_TAG}/${LATEST_TAG}-image-boot.7z"
-          curl -L "$DOWNLOAD_URL" -o image-boot.7z || true
+          curl -L "https://github.com/spike0en/nothing_archive/releases/download/${LATEST_TAG}/${LATEST_TAG}-image-boot.7z" -o image-boot.7z || true
           if [ ! -s "image-boot.7z" ]; then
             LATEST_TAG="Spacewar_V3.2-251219-1652"
             curl -L "https://github.com/spike0en/nothing_archive/releases/download/${LATEST_TAG}/${LATEST_TAG}-image-boot.7z" -o image-boot.7z
@@ -330,40 +327,32 @@ jobs:
           STOCK_BOOT=$(find . -maxdepth 2 -name "boot.img" ! -path "./AnyKernel3/*" | head -1)
           rm -f image-boot.7z
 
-          # Extract stock ramdisk byte-exact (no decompression — preserves cpio integrity)
           python3 -c "
           import struct
           with open('$STOCK_BOOT','rb') as f:
               f.read(8); ks=struct.unpack('<I',f.read(4))[0]; rs=struct.unpack('<I',f.read(4))[0]
               off=4096+((ks+4095)//4096)*4096; f.seek(off)
               open('$OUTPUT_DIR/stock_ramdisk.gz','wb').write(f.read(rs))
-          print(f'Stock ramdisk: {rs} bytes (byte-exact)')
           "
 
-          # Build boot.img with mkbootimg directly (boot editor corrupts ramdisk)
           MKBOOTIMG="$BOOT_EDITOR_DIR/aosp/system/tools/mkbootimg/mkbootimg.py"
           AVBTOOL="$BOOT_EDITOR_DIR/aosp/avb/avbtool.v1.2.py"
 
-          python3 "$MKBOOTIMG" \
-            --header_version 3 \
+          python3 "$MKBOOTIMG" --header_version 3 \
             --kernel "$RAW_DIR/arch/arm64/boot/Image" \
             --ramdisk "$OUTPUT_DIR/stock_ramdisk.gz" \
-            --os_version 11.0.0 \
-            --os_patch_level 2025-05 \
+            --os_version 11.0.0 --os_patch_level 2025-05 \
             --output "$OUTPUT_DIR/boot.img"
 
           python3 "$AVBTOOL" add_hash_footer \
             --image "$OUTPUT_DIR/boot.img" \
-            --partition_size $BOOT_PARTITION_SIZE \
-            --partition_name boot \
-            --hash_algorithm sha256 \
-            --algorithm NONE \
+            --partition_size 100663296 --partition_name boot \
+            --hash_algorithm sha256 --algorithm NONE \
             --salt 13f0b0127083a4a62c8897ee82ac3e0099f015d997031ef05fe759a8adf28f65
 
           rm -f "$OUTPUT_DIR/stock_ramdisk.gz"
-          echo "boot.img repacked (stock: $LATEST_TAG)"
 
-      # ── Package AnyKernel3 ZIP ──────────────────────────────
+      # ── Package AnyKernel3 ZIP ────────────────────────
       - name: Package AnyKernel3 ZIP
         id: package
         run: |
@@ -373,41 +362,33 @@ jobs:
           BUILD_VERSION="${{ steps.version.outputs.version }}"
           OS_VERSION="${{ steps.os_version.outputs.os_version }}"
           KSU_VER="${{ steps.ksu.outputs.ksu_version }}"
-
           cd "$KERNEL_DIR"
 
           [ -d "AnyKernel3" ] || git clone https://github.com/zerofrip/AnyKernel3 -b spacewar_nos3.0 AnyKernel3
-
           cp "$RAW_DIR/arch/arm64/boot/Image" AnyKernel3/
 
-          # DTBs
           if ls "$RAW_DIR/arch/arm64/boot/dts/vendor/qcom/"*.dtb &>/dev/null; then
             cat "$RAW_DIR/arch/arm64/boot/dts/vendor/qcom/"*.dtb > AnyKernel3/dtb
           elif ls "$RAW_DIR/arch/arm64/boot/dts/qcom/"*.dtb &>/dev/null; then
             cat "$RAW_DIR/arch/arm64/boot/dts/qcom/"*.dtb > AnyKernel3/dtb
           fi
 
-          # Package vendor kernel modules
           KREL=$(cat "$RAW_DIR/include/config/kernel.release")
           MODDIR="AnyKernel3/modules/vendor/lib/modules/${KREL}"
           mkdir -p "$MODDIR"
           find "$RAW_DIR" -name "*.ko" -exec cp {} "$MODDIR/" \;
 
-          # modules.load
           MODLOAD="$MODDIR/modules.load"
           : > "$MODLOAD"
-          for m in llcc_perfmon rdbg fts_tp goodix_fp \
-                   slimbus slimbus-ngd \
+          for m in llcc_perfmon rdbg fts_tp goodix_fp slimbus slimbus-ngd \
                    apr_dlkm q6_pdr_dlkm q6_notifier_dlkm q6_dlkm adsp_loader_dlkm \
                    swr_dlkm snd_event_dlkm swr_ctrl_dlkm native_dlkm \
                    wcd_core_dlkm wcd9xxx_dlkm mbhc_dlkm bolero_cdc_dlkm \
                    wsa_macro_dlkm va_macro_dlkm tx_macro_dlkm rx_macro_dlkm \
                    wcd937x_slave_dlkm wcd937x_dlkm wcd938x_slave_dlkm wcd938x_dlkm \
-                   wsa883x_dlkm tfa98xx_dlkm \
-                   swr_dmic_dlkm swr_haptics_dlkm stub_dlkm hdmi_dlkm \
-                   platform_dlkm machine_dlkm \
-                   btpower bt_fm_slim qcom_edac hid-aksys nothing_stability_test \
-                   camera msm_drm radio-i2c-rtc6226-qca; do
+                   wsa883x_dlkm tfa98xx_dlkm swr_dmic_dlkm swr_haptics_dlkm stub_dlkm hdmi_dlkm \
+                   platform_dlkm machine_dlkm btpower bt_fm_slim qcom_edac hid-aksys \
+                   nothing_stability_test camera msm_drm radio-i2c-rtc6226-qca; do
             [ -f "$MODDIR/${m}.ko" ] && echo "${m}.ko" >> "$MODLOAD"
           done
           for ko in "$MODDIR/"*.ko; do
@@ -415,33 +396,25 @@ jobs:
             grep -qx "$bn" "$MODLOAD" || echo "$bn" >> "$MODLOAD"
           done
 
-          # modules.dep
           : > "$MODDIR/modules.dep"
           for ko in "$MODDIR/"*.ko; do
             echo "/vendor/lib/modules/$(basename "$ko"):" >> "$MODDIR/modules.dep"
           done
 
-          # Enable module installation
           sed -i 's/do\.modules=0/do.modules=1/' AnyKernel3/anykernel.sh
-
-          NMOD=$(find "$MODDIR" -name "*.ko" | wc -l)
-          echo "$NMOD modules packaged"
 
           ZIP_NAME="Spacewar_NOS${OS_VERSION}_KernelSU-Next_v${KSU_VER}_${BUILD_VERSION}.zip"
           cd AnyKernel3
           zip -r9 "$OUTPUT_DIR/$ZIP_NAME" ./* -x .git README.md '*placeholder*'
           cd ..
-
           echo "zip_name=$ZIP_NAME" >> "$GITHUB_OUTPUT"
-          echo "Packaged: $ZIP_NAME"
 
-      # ── Bundle extras (LSPosed IT, HMA-OSS config) ────────
+      # ── Bundle extras & release ───────────────────────
       - name: Bundle extras
         run: |
           cp assets/LSPosed-v1.9.2-it-7455-release.zip output/ 2>/dev/null || true
           cp assets/HMA-OSS_config.json output/ 2>/dev/null || true
 
-      # ── Create GitHub Release ─────────────────────────────
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -454,10 +427,12 @@ jobs:
             - SUSFS v2.0.0
             - Stock boot: ${{ steps.os_version.outputs.stock_tag }}
 
+            Build ID: `ksu-${{ needs.check.outputs.ksu_commit }}_kernel-${{ needs.check.outputs.kernel_commit }}`
+
             ### Quick Start
             1. Flash `boot.img` via fastboot or the AnyKernel3 zip via recovery
             2. Install [KernelSU-Next Manager](https://github.com/KernelSU-Next/KernelSU-Next/releases)
-            3. Follow the [Root Hiding Setup](https://github.com/dracediax/Spacewar-KernelSU-Next#root-hiding-setup) guide
+            3. Follow the [Root Hiding Setup](https://github.com/dracediax/Spacewar-KernelSU-Next#-root-hiding-setup) guide
 
             ### Included extras
             - `LSPosed-v1.9.2-it-7455-release.zip` — only compatible LSPosed version
