@@ -1,7 +1,7 @@
-<h1 align="center">⬡ Nothing Phone (1) — Rooted Kernel</h1>
+<h1 align="center">Nothing Phone (1) — Kernel Builder</h1>
 
 <p align="center">
-  <strong>Plug & play kernel with full root hiding for NOS 3.2</strong>
+  <strong>Automatic & custom kernel builds with KernelSU-Next · SUSFS · full root hiding</strong>
 </p>
 
 <p align="center">
