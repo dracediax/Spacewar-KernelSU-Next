@@ -11,3 +11,7 @@ UpdateAndRelease_old.sh
 # Boot images and zips (local test artifacts)
 *.img
 *.zip
+
+# But track release extras in MiscData
+!MiscData/LSPosed-*.zip
+!MiscData/HMA-OSS_config.json

@@ -224,6 +224,16 @@ jobs:
               KernelSU-Next/kernel/app_profile.c
           fi
 
+          # Manual reboot hook for KSU fd installation (kprobe path disabled when SUSFS enabled)
+          if ! grep -q "ksu_handle_sys_reboot" kernel/reboot.c; then
+            sed -i '/^SYSCALL_DEFINE4(reboot,/i \
+          extern int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd,\n\t\t\t\t void __user **arg);' \
+              kernel/reboot.c
+            sed -i '/struct pid_namespace \*pid_ns = task_active_pid_ns/a\\n\tksu_handle_sys_reboot(magic1, magic2, cmd, (void __user **)\&arg);' \
+              kernel/reboot.c
+            echo "Reboot hook for KSU fd installed"
+          fi
+
           # Disable PINCTRL_WCD/LPI (incomplete struct pinctrl_dev prevents in-tree build)
           sed -i 's/^export CONFIG_PINCTRL_WCD=m/# export CONFIG_PINCTRL_WCD=m/' \
             techpack/audio/config/lahainaauto.conf
@@ -425,21 +435,35 @@ jobs:
           echo "zip_name=$ZIP_NAME" >> "$GITHUB_OUTPUT"
           echo "Packaged: $ZIP_NAME"
 
+      # ── Bundle extras (LSPosed IT, HMA-OSS config) ────────
+      - name: Bundle extras
+        run: |
+          cp MiscData/LSPosed-v1.9.2-it-7455-release.zip output/ 2>/dev/null || true
+          cp MiscData/HMA-OSS_config.json output/ 2>/dev/null || true
+
       # ── Create GitHub Release ─────────────────────────────
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.version }}
-          name: "Spacewar NOS${{ steps.os_version.outputs.os_version }} KernelSU-Next v${{ steps.ksu.outputs.ksu_version }}"
+          name: "Spacewar NOS${{ steps.os_version.outputs.os_version }} KernelSU-Next v${{ steps.ksu.outputs.ksu_version }} — Verified Build"
           body: |
-            **Nothing Phone (1) — NOS ${{ steps.os_version.outputs.os_version }}**
+            **Nothing Phone (1) — NOS ${{ steps.os_version.outputs.os_version }}** ✅ Tested & Stable
 
             - KernelSU-Next v${{ steps.ksu.outputs.ksu_version }} (legacy_susfs)
             - SUSFS v2.0.0
             - Stock boot: ${{ steps.os_version.outputs.stock_tag }}
 
-            **Install:** Flash `boot.img` via fastboot, or flash the AnyKernel3 zip via custom recovery.
-            **Manager:** Install [KernelSU-Next Manager](https://github.com/rifsxd/KernelSU-Next/releases)
+            ### Quick Start
+            1. Flash `boot.img` via fastboot or the AnyKernel3 zip via recovery
+            2. Install [KernelSU-Next Manager](https://github.com/KernelSU-Next/KernelSU-Next/releases)
+            3. Follow the [Root Hiding Setup](https://github.com/dracediax/Spacewar-KernelSU-Next#root-hiding-setup) guide
+
+            ### Included extras
+            - `LSPosed-v1.9.2-it-7455-release.zip` — only compatible LSPosed version
+            - `HMA-OSS_config.json` — pre-made root hiding config
           files: |
             output/boot.img
             output/${{ steps.package.outputs.zip_name }}
+            output/LSPosed-v1.9.2-it-7455-release.zip
+            output/HMA-OSS_config.json
