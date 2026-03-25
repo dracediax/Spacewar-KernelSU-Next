@@ -124,14 +124,25 @@ You can build with a specific kernel branch or KernelSU-Next version:
 ./UpdateAndRelease.sh --clean
 ```
 
-**List available branches:**
-```bash
-# Kernel branches
-git ls-remote --heads https://github.com/NothingOSS/android_kernel_msm-5.4_nothing_sm7325.git
+**Kernel branches** (match your NOS version):
 
-# KernelSU-Next tags
-git ls-remote --tags https://github.com/KernelSU-Next/KernelSU-Next.git | grep legacy
-```
+| Branch | NOS Version | Android |
+|--------|-------------|---------|
+| `sm7325/v/mr` | **3.0 — 3.2** (latest) | 15 |
+| `sm7325/u/mr` | 2.5 — 2.6 | 14 |
+| `sm7325/t` | 1.5 — 2.0 | 13 |
+| `sm7325/s` | 1.0 — 1.1 | 12 |
+
+**Stock boot images** ([spike0en/nothing_archive](https://github.com/spike0en/nothing_archive/releases)):
+
+| NOS | Latest firmware tag |
+|-----|-----------|
+| **3.2** | `Spacewar_V3.2-260206-1016` |
+| 3.0 | `Spacewar_V3.0-250409-2129` |
+| 2.6 | `Spacewar_U2.6-241031-1818` |
+| 2.5 | `Spacewar_U2.5-240612-2149` |
+| 2.0 | `Spacewar_T2.0-231110-1731` |
+| 1.5 | `Spacewar_T1.5-230706-1942` |
 
 Run `./UpdateAndRelease.sh --help` for all options.
 
