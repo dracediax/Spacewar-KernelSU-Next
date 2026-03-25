@@ -438,8 +438,8 @@ jobs:
       # ── Bundle extras (LSPosed IT, HMA-OSS config) ────────
       - name: Bundle extras
         run: |
-          cp MiscData/LSPosed-v1.9.2-it-7455-release.zip output/ 2>/dev/null || true
-          cp MiscData/HMA-OSS_config.json output/ 2>/dev/null || true
+          cp assets/LSPosed-v1.9.2-it-7455-release.zip output/ 2>/dev/null || true
+          cp assets/HMA-OSS_config.json output/ 2>/dev/null || true
 
       # ── Create GitHub Release ─────────────────────────────
       - name: Create Release

@@ -5,14 +5,11 @@ SpacewarKernelBuilder/*
 # Build output (boot.img, zip, rawfiles)
 output/
 
-# Old/backup scripts
-UpdateAndRelease_old.sh
-
-# Boot images and zips (local test artifacts)
+# Boot images and zips (local artifacts)
 *.img
 *.zip
 
-# But track release extras in MiscData
-!MiscData/LSPosed-*.zip
-!MiscData/HMA-OSS_config.json
-!MiscData/nothing_logo_white.png
+# Track release extras in assets/
+!assets/LSPosed-*.zip
+!assets/HMA-OSS_config.json
+!assets/nothing_logo_white.png
