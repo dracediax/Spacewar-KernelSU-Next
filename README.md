@@ -51,7 +51,9 @@ Install via KernelSU-Next manager → Modules → Install from storage.
 
 ### 3. LSPosed (IT)
 
-> **Important:** Use specifically **LSPosed IT v1.9.2 (7455)** from [liviafontes/LSPosed](https://github.com/liviafontes/LSPosed/releases). Other versions may not work correctly.
+> **Important:** Only **LSPosed IT v1.9.2 (7455)** works. No other version is compatible.
+>
+> Download: [`LSPosed-v1.9.2-it-7455-release.zip`](https://github.com/dracediax/Spacewar-KernelSU-Next/releases/download/v1.1.0/LSPosed-v1.9.2-it-7455-release.zip)
 
 Install via KernelSU-Next manager → Modules → Install from storage.
 
@@ -76,32 +78,14 @@ HMA-OSS should now show "Module Activated" and "System service running".
 
 ### 5. Configure HMA-OSS
 
-You can either restore a config backup or set it up manually per app.
+Download the pre-made config that hides root from common detection apps:
 
-**Option A — Restore a config backup:**
+[`HMA-OSS_config.json`](https://github.com/dracediax/Spacewar-KernelSU-Next/releases/download/v1.1.0/HMA-OSS_config.json)
 
-1. Open HMA-OSS → tap **Restore config** at the bottom
-2. Select a previously exported `.json` config file from your downloads
-
-**Option B — Manual per-app setup:**
-
-1. Open HMA-OSS → tap **Manage apps**
-2. Select the app you want to hide root from (e.g. a banking app, Duck Detector, etc.)
-3. Toggle **Enable hide** ON
-4. Tap **Template config** → select a template (e.g. "HIDE MY CUSTOM APP")
-5. Go back and tap **Using X presets** → check all relevant categories:
-   - Custom ROM apps
-   - Detector/Checker apps
-   - Root managers/Rooted apps
-   - Shizuku/Dhizuku apps
-   - Suspicious apps
-   - LSPosed/Xposed modules
-6. Tap **Using X settings presets** → check:
-   - Accessibility
-   - Developer options
-   - Input method
-
-Repeat for each app you want to hide root from. No reboot needed after configuring apps — changes take effect immediately.
+1. Save the config file to your phone's **Downloads** folder
+2. Open HMA-OSS → tap **Restore config** at the bottom
+3. Select the `HMA-OSS_config.json` file
+4. Done — all hide rules, templates, presets, and settings presets are applied automatically
 
 ## Build Locally
 
