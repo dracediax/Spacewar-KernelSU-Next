@@ -373,6 +373,14 @@ sed -i 's/^#define CONFIG_PINCTRL_WCD 1/\/\/ #define CONFIG_PINCTRL_WCD 1/' \
 sed -i 's/^#define CONFIG_PINCTRL_LPI 1/\/\/ #define CONFIG_PINCTRL_LPI 1/' \
     techpack/audio/config/lahainaautoconf.h
 
+# Hook SUSFS AVC log spoofing into slow_avc_audit (flag is set by susfs4ksu
+# module but never checked — without this, AVC denials leak to dmesg/logcat)
+if ! grep -q "susfs_is_avc_log_spoofing_enabled" security/selinux/avc.c; then
+    sed -i '/struct selinux_audit_data sad;/a\\n#ifdef CONFIG_KSU_SUSFS\n\textern bool susfs_is_avc_log_spoofing_enabled;\n\tif (susfs_is_avc_log_spoofing_enabled)\n\t\treturn 0;\n#endif' \
+        security/selinux/avc.c
+    echo "   SUSFS AVC log spoofing hook installed"
+fi
+
 # Suppress -dirty suffix
 echo "-g$(git rev-parse --short=12 HEAD)" > .scmversion
 echo "   All patches applied"

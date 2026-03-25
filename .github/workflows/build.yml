@@ -271,6 +271,11 @@ jobs:
             }' kernel/sys.c
           fi
 
+          # Hook SUSFS AVC log spoofing into slow_avc_audit
+          if ! grep -q "susfs_is_avc_log_spoofing_enabled" security/selinux/avc.c; then
+            sed -i '/struct selinux_audit_data sad;/a\\n#ifdef CONFIG_KSU_SUSFS\n\textern bool susfs_is_avc_log_spoofing_enabled;\n\tif (susfs_is_avc_log_spoofing_enabled)\n\t\treturn 0;\n#endif' security/selinux/avc.c
+          fi
+
           # Disable PINCTRL_WCD/LPI
           sed -i 's/^export CONFIG_PINCTRL_WCD=m/# export CONFIG_PINCTRL_WCD=m/' techpack/audio/config/lahainaauto.conf
           sed -i 's/^export CONFIG_PINCTRL_LPI=m/# export CONFIG_PINCTRL_LPI=m/' techpack/audio/config/lahainaauto.conf
