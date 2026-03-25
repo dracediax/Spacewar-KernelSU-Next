@@ -428,6 +428,7 @@ jobs:
           cp assets/LSPosed-v1.9.2-it-7455-release.zip output/ 2>/dev/null || true
           cp assets/HMA-OSS_config.json output/ 2>/dev/null || true
           cp assets/dmverity-props-spoof-v1.1.zip output/ 2>/dev/null || true
+          cp assets/module-update-checker-v1.0.zip output/ 2>/dev/null || true
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -458,3 +459,4 @@ jobs:
             output/LSPosed-v1.9.2-it-7455-release.zip
             output/HMA-OSS_config.json
             output/dmverity-props-spoof-v1.1.zip
+            output/module-update-checker-v1.0.zip
