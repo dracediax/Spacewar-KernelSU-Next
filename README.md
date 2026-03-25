@@ -131,7 +131,7 @@ Install **in order** through the KernelSU-Next manager. **⟳ Reboot after each 
 
 | Step | Module | Download |
 |:----:|--------|----------|
-| **1** | Play Integrity Fix | [📥 Latest release](https://github.com/osm0sis/PlayIntegrityFork/releases) |
+| **1** | Play Integrity Fix | [📥 Latest release](https://github.com/KOWX712/PlayIntegrityFix/releases) |
 | **2** | TrickyStore | [📥 Latest release](https://github.com/KernelSU-Modules-Repo/tricky_store/releases) |
 | **3** | Tricky Addon | [📥 Latest release](https://github.com/KOWX712/Tricky-Addon-Update-Target-List/releases) |
 | **4** | YuriKey | [📥 Latest release](https://github.com/Yurii0307/yurikey/releases) |
