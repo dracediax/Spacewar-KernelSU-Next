@@ -94,47 +94,33 @@ Install modules **in order** through the KernelSU-Next manager.<br>
 
 ```bash
 git clone https://github.com/dracediax/Spacewar-KernelSU-Next.git
-cd Spacewar-KernelSU-Next && chmod +x UpdateAndRelease.sh && ./UpdateAndRelease.sh
+cd Spacewar-KernelSU-Next && chmod +x SpacewarKernelBuilder.sh && ./SpacewarKernelBuilder.sh
 ```
+
+The builder runs in **interactive mode** — it walks you through picking your NOS version, firmware build, and KernelSU version. Just follow the prompts.
 
 Everything downloads automatically on first run. Output goes to `output/`.
 
 <details>
-<summary><strong>🎛️ Custom builds — pick your own kernel & KSU version</strong></summary>
+<summary><strong>🎛️ Advanced — CLI options for scripting</strong></summary>
 
 <br>
 
-Build for your specific firmware version — just pass `--stock-tag`:
-
 ```bash
-# Build for a specific firmware
-./UpdateAndRelease.sh --stock-tag Spacewar_V3.2-260206-1016
+# Skip interactive menu, build with defaults
+./SpacewarKernelBuilder.sh --auto
 
-# List all available firmware versions
-./UpdateAndRelease.sh --list-firmware
+# Build for a specific firmware + KSU version
+./SpacewarKernelBuilder.sh --stock-tag Spacewar_V3.2-260206-1016 --ksu-tag v3.1.0-legacy-susfs
 
-# Pin a specific KernelSU-Next version
-./UpdateAndRelease.sh --ksu-tag v3.1.0-legacy-susfs
-
-# Build for NOS 2.6 (needs matching kernel branch)
-./UpdateAndRelease.sh --kernel-branch sm7325/u/mr --stock-tag Spacewar_U2.6-241031-1818
+# Build for NOS 2.6
+./SpacewarKernelBuilder.sh --kernel-branch sm7325/u/mr --stock-tag Spacewar_U2.6-241031-1818
 
 # Clean build
-./UpdateAndRelease.sh --clean
+./SpacewarKernelBuilder.sh --clean
 ```
 
-**Kernel branches** — pick the one that matches your NOS version:
-
-| Branch | NOS | Android |
-|--------|-----|---------|
-| `sm7325/v/mr` | **3.0 — 3.2** (default) | 15 |
-| `sm7325/u/mr` | 2.5 — 2.6 | 14 |
-| `sm7325/t` | 1.5 — 2.0 | 13 |
-| `sm7325/s` | 1.0 — 1.1 | 12 |
-
-**Firmware versions** — run `./UpdateAndRelease.sh --list-firmware` for the full list, or see [spike0en/nothing_archive](https://github.com/spike0en/nothing_archive/releases).
-
-Run `./UpdateAndRelease.sh --help` for all options.
+Run `./SpacewarKernelBuilder.sh --help` for all options.
 
 </details>
 

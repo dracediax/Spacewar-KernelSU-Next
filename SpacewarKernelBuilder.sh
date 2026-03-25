@@ -1,42 +1,14 @@
 #!/bin/bash
 #
-# UpdateAndRelease.sh — Automated Kernel Builder
-# Nothing Phone (1) Spacewar — KernelSU-Next + SUSFS
-#
-# Sources:
-#   Kernel:      NothingOSS/android_kernel_msm-5.4_nothing_sm7325 (sm7325/v/mr)
-#   KernelSU:    KernelSU-Next/KernelSU-Next (legacy_susfs branch)
-#   Boot images: spike0en/nothing_archive
-#
-# Layout:
-#   <this-repo>/
-#     UpdateAndRelease.sh
-#     SpacewarKernelBuilder/
-#       configs/                                 ← defconfig + SUSFS source
-#       android_kernel_msm-5.4_nothing_sm7325/   ← cloned on first run
-#         KernelSU-Next/                          ← cloned on first run
-#         drivers/kernelsu → ../KernelSU-Next/kernel
-#       tc/                                       ← toolchains (auto-downloaded)
-#     output/                                     ← build artifacts
+# SpacewarKernelBuilder.sh — Kernel Builder for Nothing Phone (1)
+# KernelSU-Next + SUSFS
 #
 
 set -euo pipefail
 
 # ╔══════════════════════════════════════════════════════╗
-# ║                   CONFIGURATION                      ║
+# ║                   DEFAULTS                            ║
 # ╚══════════════════════════════════════════════════════╝
-#
-# Override from command line:
-#   ./UpdateAndRelease.sh --kernel-branch sm7325/v/mr --ksu-branch legacy_susfs
-#
-# Available kernel branches (NothingOSS):
-#   sm7325/v/mr         ← default (latest NOS 3.2)
-#   Run: git ls-remote --heads https://github.com/NothingOSS/android_kernel_msm-5.4_nothing_sm7325.git
-#
-# Available KernelSU-Next branches:
-#   legacy_susfs        ← default (5.4 + SUSFS support)
-#   Run: git ls-remote --heads https://github.com/KernelSU-Next/KernelSU-Next.git
-#
 
 KERNEL_REPO="https://github.com/NothingOSS/android_kernel_msm-5.4_nothing_sm7325.git"
 KERNEL_BRANCH="sm7325/v/mr"
@@ -52,7 +24,125 @@ DEFCONFIG="spacewar_defconfig"
 STOCK_BOOT_TAG="Spacewar_V3.2-251219-1652"
 BOOT_PARTITION_SIZE=100663296
 
-# ── Parse command-line options ─────────────────────────
+# ╔══════════════════════════════════════════════════════╗
+# ║                FIRMWARE DATABASE                      ║
+# ╚══════════════════════════════════════════════════════╝
+
+NOS_VERSIONS=("3.2" "3.0" "2.6" "2.5" "2.0" "1.5")
+NOS_ANDROID=("15"  "15"  "14"  "14"  "13"  "13")
+NOS_BRANCH=("sm7325/v/mr" "sm7325/v/mr" "sm7325/u/mr" "sm7325/u/mr" "sm7325/t" "sm7325/t")
+
+declare -A FIRMWARE_BUILDS
+FIRMWARE_BUILDS["3.2"]="Spacewar_V3.2-260206-1016 Spacewar_V3.2-251231-0041 Spacewar_V3.2-251219-1652 Spacewar_V3.2-250926-1631 Spacewar_V3.2-250804-2110 Spacewar_V3.2-250701-1737 Spacewar_V3.2-250610-1104"
+FIRMWARE_BUILDS["3.0"]="Spacewar_V3.0-250409-2129 Spacewar_V3.0-250303-1817 Spacewar_V3.0-250218-1552 Spacewar_V3.0-250108-1938 Spacewar_V3.0-241211-0926"
+FIRMWARE_BUILDS["2.6"]="Spacewar_U2.6-241031-1818 Spacewar_U2.6-240904-1634 Spacewar_U2.6-240705-1617"
+FIRMWARE_BUILDS["2.5"]="Spacewar_U2.5-240612-2149 Spacewar_U2.5-240419-1617 Spacewar_U2.5-240317-2245 Spacewar_U2.5-240301-1852 Spacewar_U2.5-240207-1031 Spacewar_U2.5-240119-1910 Spacewar_U2.5-240106-2238 Spacewar_U2.5-231220-0836 Spacewar_U2.5-231215-2256 Spacewar_U2.5-231212-1147 Spacewar_U2.5-231206-0153"
+FIRMWARE_BUILDS["2.0"]="Spacewar_T2.0-231110-1731 Spacewar_T2.0-231006-1014 Spacewar_T2.0-230901-1652 Spacewar_T2.0-230822-1751"
+FIRMWARE_BUILDS["1.5"]="Spacewar_T1.5-230706-1942 Spacewar_T1.5-230619-0042 Spacewar_T1.5-230428-2017 Spacewar_T1.5-230317-2039 Spacewar_T1.5-230310-1650 Spacewar_T1.5-230213-2131 Spacewar_T1.5-230114-2357"
+
+# KSU tags (populated dynamically, fallback list)
+KSU_TAGS_FALLBACK="v3.1.0-legacy-susfs v3.0.1-legacy-susfs v3.0.0-legacy-susfs"
+
+# ╔══════════════════════════════════════════════════════╗
+# ║              INTERACTIVE MODE                         ║
+# ╚══════════════════════════════════════════════════════╝
+
+pick_number() {
+    local max=$1 prompt=$2 choice
+    while true; do
+        read -rp "$prompt" choice
+        if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "$max" ]; then
+            echo "$choice"
+            return
+        fi
+        echo "  Invalid choice. Enter a number between 1 and $max."
+    done
+}
+
+interactive_menu() {
+    echo ""
+    echo "  ╔═══════════════════════════════════════════╗"
+    echo "  ║    ⬡  SpacewarKernelBuilder               ║"
+    echo "  ║    Nothing Phone (1) · KernelSU-Next      ║"
+    echo "  ╚═══════════════════════════════════════════╝"
+    echo ""
+    echo "  [1] Auto build (latest kernel + latest KSU)"
+    echo "  [2] Custom build (choose your versions)"
+    echo ""
+    local mode
+    mode=$(pick_number 2 "  Choose [1/2]: ")
+
+    if [ "$mode" = "1" ]; then
+        echo ""
+        echo "  → Building latest kernel (sm7325/v/mr) + latest KSU-Next"
+        echo ""
+        return
+    fi
+
+    # ── Pick NOS version ──────────────────────────────
+    echo ""
+    echo "  Which NothingOS version are you running?"
+    echo ""
+    for i in "${!NOS_VERSIONS[@]}"; do
+        printf "  [%d] NOS %-4s  (Android %s, branch: %s)\n" \
+            $((i + 1)) "${NOS_VERSIONS[$i]}" "${NOS_ANDROID[$i]}" "${NOS_BRANCH[$i]}"
+    done
+    echo ""
+    local nos_choice
+    nos_choice=$(pick_number ${#NOS_VERSIONS[@]} "  Choose [1-${#NOS_VERSIONS[@]}]: ")
+    local nos_idx=$((nos_choice - 1))
+    local selected_nos="${NOS_VERSIONS[$nos_idx]}"
+    KERNEL_BRANCH="${NOS_BRANCH[$nos_idx]}"
+
+    # ── Pick firmware build ───────────────────────────
+    echo ""
+    echo "  Available builds for NOS $selected_nos:"
+    echo ""
+    local builds_str="${FIRMWARE_BUILDS[$selected_nos]}"
+    local -a builds
+    read -ra builds <<< "$builds_str"
+    for i in "${!builds[@]}"; do
+        printf "  [%d] %s\n" $((i + 1)) "${builds[$i]}"
+    done
+    echo ""
+    local fw_choice
+    fw_choice=$(pick_number ${#builds[@]} "  Choose [1-${#builds[@]}]: ")
+    STOCK_BOOT_TAG="${builds[$((fw_choice - 1))]}"
+
+    # ── Pick KSU version ──────────────────────────────
+    echo ""
+    echo "  Fetching KernelSU-Next versions..."
+    local -a ksu_tags
+    if ksu_remote=$(git ls-remote --tags "$KSU_REPO" 2>/dev/null | grep "legacy-susfs" | grep -v '\^{}' | sed 's|.*refs/tags/||' | sort -rV); then
+        read -ra ksu_tags <<< "$(echo "$ksu_remote" | head -10 | tr '\n' ' ')"
+    fi
+    if [ ${#ksu_tags[@]} -eq 0 ]; then
+        read -ra ksu_tags <<< "$KSU_TAGS_FALLBACK"
+    fi
+
+    echo ""
+    echo "  Available KernelSU-Next versions:"
+    echo ""
+    for i in "${!ksu_tags[@]}"; do
+        local label="${ksu_tags[$i]}"
+        [ "$i" = "0" ] && label="$label  (latest)"
+        printf "  [%d] %s\n" $((i + 1)) "$label"
+    done
+    echo ""
+    local ksu_choice
+    ksu_choice=$(pick_number ${#ksu_tags[@]} "  Choose [1-${#ksu_tags[@]}]: ")
+    KSU_TAG="${ksu_tags[$((ksu_choice - 1))]}"
+
+    echo ""
+}
+
+# ╔══════════════════════════════════════════════════════╗
+# ║              PARSE CLI / RUN INTERACTIVE              ║
+# ╚══════════════════════════════════════════════════════╝
+
+CI_MODE="${CI:-false}"
+
+# Parse command-line options (used by CI and advanced users)
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --kernel-branch)  KERNEL_BRANCH="$2"; shift 2 ;;
@@ -60,90 +150,41 @@ while [[ $# -gt 0 ]]; do
         --ksu-tag)        KSU_TAG="$2"; shift 2 ;;
         --stock-tag)      STOCK_BOOT_TAG="$2"; shift 2 ;;
         --clean)          CLEAN_BUILD=1; shift ;;
-        --list-firmware)
-            echo "Available Nothing Phone (1) firmware versions:"
-            echo ""
-            echo "  NOS 3.2 (Android 15) — kernel branch: sm7325/v/mr"
-            echo "    Spacewar_V3.2-260206-1016"
-            echo "    Spacewar_V3.2-251231-0041"
-            echo "    Spacewar_V3.2-251219-1652"
-            echo "    Spacewar_V3.2-250926-1631"
-            echo "    Spacewar_V3.2-250804-2110"
-            echo "    Spacewar_V3.2-250701-1737"
-            echo "    Spacewar_V3.2-250610-1104"
-            echo ""
-            echo "  NOS 3.0 (Android 15) — kernel branch: sm7325/v/mr"
-            echo "    Spacewar_V3.0-250409-2129"
-            echo "    Spacewar_V3.0-250303-1817"
-            echo "    Spacewar_V3.0-250218-1552"
-            echo "    Spacewar_V3.0-250108-1938"
-            echo "    Spacewar_V3.0-241211-0926"
-            echo ""
-            echo "  NOS 2.6 (Android 14) — kernel branch: sm7325/u/mr"
-            echo "    Spacewar_U2.6-241031-1818"
-            echo "    Spacewar_U2.6-240904-1634"
-            echo "    Spacewar_U2.6-240705-1617"
-            echo ""
-            echo "  NOS 2.5 (Android 14) — kernel branch: sm7325/u/mr"
-            echo "    Spacewar_U2.5-240612-2149"
-            echo "    Spacewar_U2.5-240419-1617"
-            echo "    Spacewar_U2.5-240317-2245"
-            echo "    Spacewar_U2.5-240301-1852"
-            echo "    Spacewar_U2.5-240207-1031"
-            echo "    Spacewar_U2.5-240119-1910"
-            echo "    Spacewar_U2.5-240106-2238"
-            echo "    Spacewar_U2.5-231220-0836"
-            echo "    Spacewar_U2.5-231215-2256"
-            echo "    Spacewar_U2.5-231212-1147"
-            echo "    Spacewar_U2.5-231206-0153"
-            echo ""
-            echo "  NOS 2.0 (Android 13) — kernel branch: sm7325/t"
-            echo "    Spacewar_T2.0-231110-1731"
-            echo "    Spacewar_T2.0-231006-1014"
-            echo "    Spacewar_T2.0-230901-1652"
-            echo "    Spacewar_T2.0-230822-1751"
-            echo ""
-            echo "  NOS 1.5 (Android 13) — kernel branch: sm7325/t"
-            echo "    Spacewar_T1.5-230706-1942"
-            echo "    Spacewar_T1.5-230619-0042"
-            echo "    Spacewar_T1.5-230428-2017"
-            echo "    Spacewar_T1.5-230317-2039"
-            echo "    Spacewar_T1.5-230310-1650"
-            echo "    Spacewar_T1.5-230213-2131"
-            echo "    Spacewar_T1.5-230114-2357"
-            echo ""
-            echo "Usage: ./UpdateAndRelease.sh --stock-tag Spacewar_V3.2-260206-1016"
-            exit 0 ;;
+        --auto)           shift ;;  # skip interactive
         --help|-h)
             cat <<HELP
-Usage: ./UpdateAndRelease.sh [OPTIONS]
+Usage: ./SpacewarKernelBuilder.sh [OPTIONS]
+
+Run without options for interactive mode.
 
 Options:
-  --kernel-branch BRANCH   Kernel branch to build (default: sm7325/v/mr)
+  --kernel-branch BRANCH   Kernel branch (default: sm7325/v/mr)
   --ksu-branch BRANCH      KernelSU-Next branch (default: legacy_susfs)
-  --ksu-tag TAG             Checkout a specific KernelSU-Next tag (e.g. v3.1.0-legacy-susfs)
-  --stock-tag TAG           Build for a specific NOS firmware (e.g. Spacewar_V3.2-260206-1016)
-  --clean                  Clean build — delete output and rebuild from scratch
-  --list-firmware          Show all available firmware versions
+  --ksu-tag TAG             KernelSU-Next version tag (e.g. v3.1.0-legacy-susfs)
+  --stock-tag TAG           Firmware version (e.g. Spacewar_V3.2-260206-1016)
+  --auto                   Skip interactive menu, use defaults
+  --clean                  Clean build
   -h, --help               Show this help
-
-Examples:
-  ./UpdateAndRelease.sh
-  ./UpdateAndRelease.sh --stock-tag Spacewar_V3.2-260206-1016
-  ./UpdateAndRelease.sh --kernel-branch sm7325/u/mr --stock-tag Spacewar_U2.6-241031-1818
-  ./UpdateAndRelease.sh --ksu-tag v3.1.0-legacy-susfs
-  ./UpdateAndRelease.sh --clean
 HELP
             exit 0 ;;
         *) echo "Unknown option: $1 (try --help)"; exit 1 ;;
     esac
 done
 
-echo "Config:"
+# Run interactive menu if local (not CI) and no CLI overrides were given
+if [ "$CI_MODE" = "false" ] && [ -z "${KSU_TAG:-}" ] && [ "$STOCK_BOOT_TAG" = "Spacewar_V3.2-251219-1652" ] && [ "$KERNEL_BRANCH" = "sm7325/v/mr" ]; then
+    # Check if running in a terminal
+    if [ -t 0 ]; then
+        interactive_menu
+    fi
+fi
+
+echo "═══════════════════════════════════════════════"
 echo "  Kernel branch:  $KERNEL_BRANCH"
 echo "  KSU branch:     $KSU_BRANCH"
 [ -n "${KSU_TAG:-}" ] && echo "  KSU tag:         $KSU_TAG"
 echo "  Stock boot:     $STOCK_BOOT_TAG"
+echo "═══════════════════════════════════════════════"
 echo ""
 
 # ══════════════════════════════════════════════════════════
