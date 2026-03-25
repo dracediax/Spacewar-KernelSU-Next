@@ -25,6 +25,19 @@ set -euo pipefail
 # ╔══════════════════════════════════════════════════════╗
 # ║                   CONFIGURATION                      ║
 # ╚══════════════════════════════════════════════════════╝
+#
+# Override from command line:
+#   ./UpdateAndRelease.sh --kernel-branch sm7325/v/mr --ksu-branch legacy_susfs
+#
+# Available kernel branches (NothingOSS):
+#   sm7325/v/mr         ← default (latest NOS 3.2)
+#   Run: git ls-remote --heads https://github.com/NothingOSS/android_kernel_msm-5.4_nothing_sm7325.git
+#
+# Available KernelSU-Next branches:
+#   legacy_susfs        ← default (5.4 + SUSFS support)
+#   Run: git ls-remote --heads https://github.com/KernelSU-Next/KernelSU-Next.git
+#
+
 KERNEL_REPO="https://github.com/NothingOSS/android_kernel_msm-5.4_nothing_sm7325.git"
 KERNEL_BRANCH="sm7325/v/mr"
 KERNEL_DIR="android_kernel_msm-5.4_nothing_sm7325"
@@ -38,6 +51,41 @@ AK3_BRANCH="spacewar_nos3.0"
 DEFCONFIG="spacewar_defconfig"
 STOCK_BOOT_TAG="Spacewar_V3.2-251219-1652"
 BOOT_PARTITION_SIZE=100663296
+
+# ── Parse command-line options ─────────────────────────
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --kernel-branch)  KERNEL_BRANCH="$2"; shift 2 ;;
+        --ksu-branch)     KSU_BRANCH="$2"; shift 2 ;;
+        --ksu-tag)        KSU_TAG="$2"; shift 2 ;;
+        --clean)          CLEAN_BUILD=1; shift ;;
+        --help|-h)
+            cat <<HELP
+Usage: ./UpdateAndRelease.sh [OPTIONS]
+
+Options:
+  --kernel-branch BRANCH   Kernel branch to build (default: sm7325/v/mr)
+  --ksu-branch BRANCH      KernelSU-Next branch (default: legacy_susfs)
+  --ksu-tag TAG             Checkout a specific KernelSU-Next tag (e.g. v3.1.0-legacy-susfs)
+  --clean                  Clean build — delete output and rebuild from scratch
+  -h, --help               Show this help
+
+Examples:
+  ./UpdateAndRelease.sh
+  ./UpdateAndRelease.sh --kernel-branch sm7325/v/mr --ksu-branch legacy_susfs
+  ./UpdateAndRelease.sh --ksu-tag v3.1.0-legacy-susfs
+  ./UpdateAndRelease.sh --clean
+HELP
+            exit 0 ;;
+        *) echo "Unknown option: $1 (try --help)"; exit 1 ;;
+    esac
+done
+
+echo "Config:"
+echo "  Kernel branch:  $KERNEL_BRANCH"
+echo "  KSU branch:     $KSU_BRANCH"
+[ -n "${KSU_TAG:-}" ] && echo "  KSU tag:         $KSU_TAG"
+echo ""
 
 # ══════════════════════════════════════════════════════════
 
@@ -53,6 +101,12 @@ RAW_DIR="$OUTPUT_DIR/rawfiles"
 SECONDS=0
 
 die() { echo "FATAL: $*"; exit 1; }
+
+# Handle --clean
+if [ "${CLEAN_BUILD:-}" = "1" ]; then
+    echo "Clean build requested — removing output..."
+    rm -rf "$RAW_DIR" "$OUTPUT_DIR"/*.img "$OUTPUT_DIR"/*.zip
+fi
 
 # ── 0. Dependencies ─────────────────────────────────────
 echo "Checking dependencies..."
@@ -120,6 +174,13 @@ if git rev-parse --is-shallow-repository 2>/dev/null | grep -q true; then
     git fetch --unshallow 2>/dev/null || true
 fi
 git fetch --tags 2>/dev/null || true
+
+# Checkout specific tag if requested
+if [ -n "${KSU_TAG:-}" ]; then
+    echo "   Checking out KSU tag: $KSU_TAG"
+    git checkout "$KSU_TAG" || die "Tag $KSU_TAG not found"
+fi
+
 KSU_VERSION=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' | sed 's/-legacy-susfs//')
 [ -z "$KSU_VERSION" ] && KSU_VERSION="unknown"
 echo "   KSU-Next version: $KSU_VERSION"

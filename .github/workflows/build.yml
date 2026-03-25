@@ -446,7 +446,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.version }}
-          name: "Spacewar NOS${{ steps.os_version.outputs.os_version }} KernelSU-Next v${{ steps.ksu.outputs.ksu_version }} — Verified Build"
+          name: "${{ steps.version.outputs.version }} — Spacewar NOS${{ steps.os_version.outputs.os_version }} · KernelSU-Next v${{ steps.ksu.outputs.ksu_version }} · SUSFS v2.0.0"
           body: |
             **Nothing Phone (1) — NOS ${{ steps.os_version.outputs.os_version }}** ✅ Tested & Stable
 

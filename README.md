@@ -101,6 +101,42 @@ git clone https://github.com/dracediax/Spacewar-KernelSU-Next.git
 cd Spacewar-KernelSU-Next && chmod +x UpdateAndRelease.sh && ./UpdateAndRelease.sh
 ```
 
+Everything downloads automatically on first run. Output goes to `output/`.
+
+<details>
+<summary><strong>🎛️ Custom builds — pick your own kernel & KSU version</strong></summary>
+
+<br>
+
+You can build with a specific kernel branch or KernelSU-Next version:
+
+```bash
+# Use a different kernel branch
+./UpdateAndRelease.sh --kernel-branch sm7325/v/mr
+
+# Use a specific KernelSU-Next tag
+./UpdateAndRelease.sh --ksu-tag v3.1.0-legacy-susfs
+
+# Combine both
+./UpdateAndRelease.sh --kernel-branch sm7325/v/mr --ksu-tag v3.1.0-legacy-susfs
+
+# Clean build (delete old output first)
+./UpdateAndRelease.sh --clean
+```
+
+**List available branches:**
+```bash
+# Kernel branches
+git ls-remote --heads https://github.com/NothingOSS/android_kernel_msm-5.4_nothing_sm7325.git
+
+# KernelSU-Next tags
+git ls-remote --tags https://github.com/KernelSU-Next/KernelSU-Next.git | grep legacy
+```
+
+Run `./UpdateAndRelease.sh --help` for all options.
+
+</details>
+
 <details>
 <summary>Sources</summary>
 
