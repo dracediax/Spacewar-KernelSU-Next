@@ -127,7 +127,7 @@ Under **Custom SUS Feature → Custom SUS Path**, paste all paths at once and ta
 
 ### Configure YuriKey
 
-1. KernelSU-Next manager → **Modules** → **YuriKey** → tap the **action button**
+1. KernelSU-Next manager → **Modules** → **YuriKey** → tap the **WebUI button**
 2. Go to **Menu** and run these scripts in order:
    - Set up Yuri Keybox
    - Force stop & clear data Play Store
