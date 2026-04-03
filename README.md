@@ -75,8 +75,6 @@ Install modules **in order** through the KernelSU-Next manager, then **reboot on
 | **6** | YuriKey | [📥 Latest release](https://github.com/Yurii0307/yurikey/releases) |
 | **7** | NoHello | [📥 Latest release](https://github.com/MhmRdd/NoHello/releases) |
 
-> Steps 5 and 7 require no configuration — install and continue.
-
 ---
 
 ### Configure SUSFS
