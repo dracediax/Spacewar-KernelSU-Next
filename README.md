@@ -38,6 +38,7 @@
 <tr><td>🛡️</td><td><strong>SUSFS v2.0.0</strong></td><td>Kernel-level root hiding</td></tr>
 <tr><td>🏦</td><td><strong>Root hiding stack</strong></td><td>Pass banking apps, Play Integrity, root detectors</td></tr>
 <tr><td>📦</td><td><strong>Vendor modules</strong></td><td>Audio, camera, display, BT — all included</td></tr>
+<tr><td>🔐</td><td><strong>vbmeta.img</strong></td><td>Pre-patched stock vbmeta — disables dm-verity so partition props don't need spoofing</td></tr>
 </table>
 
 ---
@@ -46,19 +47,29 @@
 
 ### Flash the Kernel
 
+> [!NOTE]
+> **Always flash `vbmeta.img` alongside the kernel.** This disables dm-verity at the bootloader level so the `partition.system.verified` / `partition.vendor.verified` props report correctly on their own — no spoof module needed. Without it those props expose the custom kernel to detection apps and banking apps.
+
 <details>
 <summary><strong>Option A — Fastboot (recommended)</strong></summary>
 
 ```
 fastboot flash boot boot.img
+fastboot flash vbmeta --disable-verity --disable-verification vbmeta.img
+fastboot reboot
 ```
 
 </details>
 
 <details>
-<summary><strong>Option B — Already rooted</strong></summary>
+<summary><strong>Option B — Already rooted (AnyKernel3 zip)</strong></summary>
 
-Flash the `Spacewar_NOS3.2_KernelSU-Next_*.zip` via recovery or a kernel manager app.
+Flash `Spacewar_NOS3.2_KernelSU-Next_*.zip` via recovery or a kernel manager app, then from fastboot:
+
+```
+fastboot flash vbmeta --disable-verity --disable-verification vbmeta.img
+fastboot reboot
+```
 
 </details>
 
@@ -83,7 +94,7 @@ Install modules **in order** through the KernelSU-Next manager.<br>
 |:----:|--------|----------|
 | **1** | SUSFS for KSU | [📥 Latest release](https://github.com/sidex15/susfs4ksu-module/releases) |
 | **2** | ReZygisk | [📥 Latest release](https://github.com/PerformanC/ReZygisk/releases) |
-| **3** | DM-Verity Props Spoof | [📥 v1.1](https://github.com/dracediax/Spacewar-KernelSU-Next/releases/latest/download/dmverity-props-spoof-v1.1.zip) — included in release |
+| **3** | DM-Verity Props Spoof | [📥 v1.1](https://github.com/dracediax/Spacewar-KernelSU-Next/releases/latest/download/dmverity-props-spoof-v1.1.zip) — **skip if you flashed `vbmeta.img`** |
 | **4** | LSPosed IT | [📥 v1.9.2-7455](https://github.com/dracediax/Spacewar-KernelSU-Next/releases/latest/download/LSPosed-v1.9.2-it-7455-release.zip) ⚠️ **Only this version works** |
 
 ### Configure SUSFS
