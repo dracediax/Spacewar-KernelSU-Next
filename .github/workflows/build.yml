@@ -3,7 +3,7 @@ name: Build Kernel & Release
 on:
   workflow_dispatch:     # Manual trigger (always builds)
   schedule:
-    - cron: '0 6 * * *'  # Daily at 06:00 UTC — checks for new KSU/kernel versions
+    - cron: '0 6 * * 1,4'  # Mon/Thu at 06:00 UTC — checks for upstream changes
   push:
     branches: [main]
     paths:
@@ -17,14 +17,19 @@ jobs:
   # ══════════════════════════════════════════════════════
   check:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       should_build: ${{ steps.check.outputs.should_build }}
       ksu_version: ${{ steps.check.outputs.ksu_version }}
       ksu_commit: ${{ steps.check.outputs.ksu_commit }}
       kernel_commit: ${{ steps.check.outputs.kernel_commit }}
+      stock_tag: ${{ steps.check.outputs.stock_tag }}
     steps:
       - name: Check for upstream changes
         id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Get latest KSU-Next commit on legacy_susfs
           KSU_COMMIT=$(git ls-remote https://github.com/KernelSU-Next/KernelSU-Next.git refs/heads/legacy_susfs | cut -f1 | head -c12)
@@ -39,12 +44,19 @@ jobs:
           [ -z "$KSU_VERSION" ] && KSU_VERSION="unknown"
           echo "ksu_version=$KSU_VERSION" >> "$GITHUB_OUTPUT"
 
-          BUILD_ID="ksu-${KSU_COMMIT}_kernel-${KERNEL_COMMIT}"
+          # Get latest NothingOS stock tag from nothing_archive
+          STOCK_TAG=$(gh api repos/spike0en/nothing_archive/releases --jq '.[].tag_name' \
+            | grep '^Spacewar_' | head -1)
+          [ -z "$STOCK_TAG" ] && STOCK_TAG="Spacewar_V3.2-251219-1652"
+          echo "stock_tag=$STOCK_TAG" >> "$GITHUB_OUTPUT"
+
+          # BUILD_ID covers all three upstream sources
+          BUILD_ID="ksu-${KSU_COMMIT}_kernel-${KERNEL_COMMIT}_nos-${STOCK_TAG}"
           echo "Current build ID: $BUILD_ID"
 
-          # Check if a release with this exact combo already exists
-          EXISTING=$(curl -sf "https://api.github.com/repos/${{ github.repository }}/releases" \
-            | grep -o "\"body\":\"[^\"]*\"" | grep -c "$BUILD_ID" || true)
+          # Check if a release with this exact combo already exists (authenticated via GH_TOKEN)
+          EXISTING=$(gh api "repos/${{ github.repository }}/releases" --paginate \
+            | jq -r '.[].body' | grep -cF "$BUILD_ID" || echo 0)
 
           if [ "$EXISTING" -gt 0 ] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
             echo "Build $BUILD_ID already released — skipping"
@@ -312,8 +324,8 @@ jobs:
       - name: Detect stock OS version
         id: os_version
         run: |
-          LATEST_TAG=$(curl -sf https://api.github.com/repos/spike0en/nothing_archive/releases \
-            | grep -oP '"tag_name": "\KSpacewar_[^"]+' | head -n 1)
+          # Reuse the tag already resolved in the check job
+          LATEST_TAG="${{ needs.check.outputs.stock_tag }}"
           [ -z "$LATEST_TAG" ] && LATEST_TAG="Spacewar_V3.2-251219-1652"
           OS_VERSION=$(echo "$LATEST_TAG" | grep -oP 'V\K[0-9]+\.[0-9]+')
           [ -z "$OS_VERSION" ] && OS_VERSION="3.2"
@@ -458,7 +470,7 @@ jobs:
             - SUSFS v2.0.0
             - Stock boot: ${{ steps.os_version.outputs.stock_tag }}
 
-            Build ID: `ksu-${{ needs.check.outputs.ksu_commit }}_kernel-${{ needs.check.outputs.kernel_commit }}`
+            Build ID: `ksu-${{ needs.check.outputs.ksu_commit }}_kernel-${{ needs.check.outputs.kernel_commit }}_nos-${{ needs.check.outputs.stock_tag }}`
 
             ### Quick Start
 
