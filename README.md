@@ -94,7 +94,7 @@ Under **Custom SUSFS Settings** enable:
 - ✅ Hide vendor sepolicy
 - ✅ Hide compat matrix
 
-Under **Custom SUS Feature → Custom SUS Path**, add each of the following paths and tap **Make it sus** after each:
+Under **Custom SUS Feature → Custom SUS Path**, paste all paths at once and tap **Make it sus**:
 
 ```
 /proc/*/maps
