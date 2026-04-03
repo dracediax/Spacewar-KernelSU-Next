@@ -63,8 +63,7 @@ Then install [**KernelSU-Next Manager**](https://github.com/KernelSU-Next/Kernel
 
 ## 🔒 Root Hiding & Integrity Setup
 
-Install modules **in order** through the KernelSU-Next manager.<br>
-**⟳ Reboot after each one.**
+Install modules **in order** through the KernelSU-Next manager, then reboot.
 
 | Step | Module | Download |
 |:----:|--------|----------|
