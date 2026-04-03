@@ -63,7 +63,7 @@ Then install [**KernelSU-Next Manager**](https://github.com/KernelSU-Next/Kernel
 
 ## 🔒 Root Hiding & Integrity Setup
 
-Install modules **in order** through the KernelSU-Next manager, then reboot.
+Install modules **in order** through the KernelSU-Next manager, then **reboot once** after all are installed.
 
 | Step | Module | Download |
 |:----:|--------|----------|
@@ -79,7 +79,7 @@ Install modules **in order** through the KernelSU-Next manager, then reboot.
 
 ---
 
-### 1 · Configure SUSFS
+### Configure SUSFS
 
 Open the **susfs4ksu** module settings (KSU manager → Modules → susfs4ksu → action button) and enable:
 
@@ -107,17 +107,17 @@ Under **Custom SUS Feature → Custom SUS Path**, paste all paths at once and ta
 
 ---
 
-### 2 · Activate Vector (LSPosed)
+### Activate Vector (LSPosed)
 
 > Install the [HMA-OSS](https://github.com/frknkrc44/HMA-OSS/releases) app first.
 
 1. KernelSU-Next manager → **Modules** → **Vector** → tap the **action button**
 2. In Vector → **Modules** → **HMA-OSS** → enable → check **System Framework**
-3. **⟳ Reboot if necessary**
+3. **⟳ Reboot if LSPosed asks — it may require one after enabling HMA-OSS**
 
 ---
 
-### 3 · Configure ZygiskNext
+### Configure ZygiskNext
 
 1. KernelSU-Next manager → **Modules** → **ZygiskNext** → tap the **action button** to open the WebUI
 2. Set **Denylist policy** → **Unmount only**
@@ -127,7 +127,7 @@ Under **Custom SUS Feature → Custom SUS Path**, paste all paths at once and ta
 
 ---
 
-### 6 · Configure YuriKey
+### Configure YuriKey
 
 1. KernelSU-Next manager → **Modules** → **YuriKey** → tap the **action button**
 2. Go to **Menu** and run these scripts in order:
@@ -138,11 +138,11 @@ Under **Custom SUS Feature → Custom SUS Path**, paste all paths at once and ta
    - Set up verified boot hash
 3. Go to **Menu+** and run:
    - Clear all detection traces
-   - Set HMA-OSS configs
+   - Set HMA-OSS configs — this imports the HMA-OSS configuration
 
 ---
 
-### 4 · Configure TeeSimulator-RS
+### Configure TeeSimulator-RS
 
 1. KernelSU-Next manager → **Modules** → **TeeSimulator-RS** → tap the **action button** to open the WebUI
 2. Toggle **on** every app that root needs to be hidden from. Typical apps to hide from:
@@ -157,7 +157,7 @@ Under **Custom SUS Feature → Custom SUS Path**, paste all paths at once and ta
 
 ---
 
-### 7 · Configure HMA-OSS
+### Configure HMA-OSS
 
 #### Initial setup
 
