@@ -437,6 +437,8 @@ fi
 
 7z x -y image-boot.7z
 STOCK_BOOT=$(find . -maxdepth 2 -name "boot.img" ! -path "./AnyKernel3/*" | head -1)
+STOCK_VBMETA=$(find . -maxdepth 2 -name "vbmeta.img" | head -1)
+[ -n "$STOCK_VBMETA" ] && cp "$STOCK_VBMETA" "$OUTPUT_DIR/vbmeta.img" && echo "   vbmeta.img extracted from boot archive"
 rm -f image-boot.7z
 
 # Extract stock ramdisk byte-exact (no decompression — preserves cpio integrity)
@@ -468,12 +470,6 @@ python3 "$AVBTOOL" add_hash_footer \
     --hash_algorithm sha256 \
     --algorithm NONE \
     --salt 13f0b0127083a4a62c8897ee82ac3e0099f015d997031ef05fe759a8adf28f65 || die "avbtool failed"
-
-python3 "$AVBTOOL" make_vbmeta_image \
-    --flags 3 \
-    --algorithm NONE \
-    --output "$OUTPUT_DIR/vbmeta.img" || die "vbmeta generation failed"
-echo "vbmeta.img generated (flags=3: hashtree+verification disabled)"
 
 rm -f "$OUTPUT_DIR/stock_ramdisk.gz"
 echo "boot.img repacked (stock: $LATEST_TAG)"
@@ -560,8 +556,10 @@ echo ""
 if [ -f "$OUTPUT_DIR/vbmeta.img" ]; then
 echo "  ┌─ Flash commands (fastboot) ──────────────────────────────────────────┐"
 echo "  │ fastboot flash boot boot.img                                         │"
-echo "  │ fastboot flash vbmeta_a vbmeta.img                                   │"
-echo "  │ fastboot flash vbmeta_b vbmeta.img                                   │"
+echo "  │ fastboot flash vbmeta_a --disable-verity --disable-verification \     │"
+echo "  │         vbmeta.img                                                  │"
+echo "  │ fastboot flash vbmeta_b --disable-verity --disable-verification \   │"
+echo "  │         vbmeta.img                                                  │"
 echo "  │ fastboot reboot                                                      │"
 echo "  └──────────────────────────────────────────────────────────────────────┘"
 echo ""

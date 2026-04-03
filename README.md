@@ -49,14 +49,16 @@
 
 > [!NOTE]
 > **Always flash `vbmeta.img` alongside the kernel.** This disables dm-verity at the bootloader level so the `partition.system.verified` / `partition.vendor.verified` props report correctly on their own — no spoof module needed. Without it those props expose the custom kernel to detection apps and banking apps.
+> 
+> ⚠️ **Use [platform-tools r34.0.4](https://dl.google.com/android/repository/platform-tools_r34.0.4-windows.zip)** — newer versions have a bug parsing the vbmeta image and will error with `Failed to find AVB_MAGIC`.
 
 <details>
 <summary><strong>Option A — Fastboot (recommended)</strong></summary>
 
 ```
 fastboot flash boot boot.img
-fastboot flash vbmeta_a vbmeta.img
-fastboot flash vbmeta_b vbmeta.img
+fastboot flash vbmeta_a --disable-verity --disable-verification vbmeta.img
+fastboot flash vbmeta_b --disable-verity --disable-verification vbmeta.img
 fastboot reboot
 ```
 
@@ -68,8 +70,8 @@ fastboot reboot
 Flash `Spacewar_NOS3.2_KernelSU-Next_*.zip` via recovery or a kernel manager app, then from fastboot:
 
 ```
-fastboot flash vbmeta_a vbmeta.img
-fastboot flash vbmeta_b vbmeta.img
+fastboot flash vbmeta_a --disable-verity --disable-verification vbmeta.img
+fastboot flash vbmeta_b --disable-verity --disable-verification vbmeta.img
 fastboot reboot
 ```
 
