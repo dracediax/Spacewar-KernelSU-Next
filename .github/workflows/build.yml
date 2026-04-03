@@ -3,7 +3,7 @@ name: Build Kernel & Release
 on:
   workflow_dispatch:     # Manual trigger (always builds)
   schedule:
-    - cron: '0 6 * * 1,4'  # Mon/Thu at 06:00 UTC — checks for upstream changes
+    - cron: '0 6 * * *'  # Daily at 06:00 UTC — checks for upstream changes
   push:
     branches: [main]
     paths:
