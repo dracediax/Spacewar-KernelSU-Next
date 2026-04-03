@@ -127,21 +127,6 @@ Under **Custom SUS Feature → Custom SUS Path**, paste all paths at once and ta
 
 ---
 
-### 4 · Configure TeeSimulator-RS
-
-1. KernelSU-Next manager → **Modules** → **TeeSimulator-RS** → tap the **action button** to open the WebUI
-2. Toggle **on** every app that root needs to be hidden from. Typical apps to hide from:
-   - Android System Key Verifier
-   - Android System SafetyCore
-   - Carrier Services
-   - Google Play Services
-   - Google Play Store
-   - Google Services Framework
-   - Google Wallet
-3. If you have detector apps installed (e.g. YASNAC, Native Detector, DUCK Detector), toggle those on as well.
-
----
-
 ### 6 · Configure YuriKey
 
 1. KernelSU-Next manager → **Modules** → **YuriKey** → tap the **action button**
@@ -154,6 +139,21 @@ Under **Custom SUS Feature → Custom SUS Path**, paste all paths at once and ta
 3. Go to **Menu+** and run:
    - Clear all detection traces
    - Set HMA-OSS configs
+
+---
+
+### 4 · Configure TeeSimulator-RS
+
+1. KernelSU-Next manager → **Modules** → **TeeSimulator-RS** → tap the **action button** to open the WebUI
+2. Toggle **on** every app that root needs to be hidden from. Typical apps to hide from:
+   - Android System Key Verifier
+   - Android System SafetyCore
+   - Carrier Services
+   - Google Play Services
+   - Google Play Store
+   - Google Services Framework
+   - Google Wallet
+3. If you have detector apps installed (e.g. YASNAC, Native Detector, DUCK Detector), toggle those on as well.
 
 ---
 
