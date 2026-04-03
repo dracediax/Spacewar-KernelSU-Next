@@ -157,6 +157,30 @@ Under **Custom SUS Feature → Custom SUS Path**, paste all paths at once and ta
 
 ---
 
+### 7 · Configure HMA-OSS
+
+#### Initial setup
+
+1. Open **HMA-OSS** → **Settings** → enable **Hide module icon in launcher**
+   > To reopen it afterwards: LSPosed → Modules → HMA-OSS → cogwheel icon
+
+#### Hide root from a banking or other app
+
+1. **Manage Apps** → find the app → tap it → enable **Hide**
+2. **Template Config** → **Use Templates** → select **Hide My Custom App**
+3. Under **Using 0 Presets** — check all
+4. Under **Using 0 Settings Presets** — check all
+
+#### Make Google Wallet work
+
+1. **Manage Templates** → **Create** → name it (e.g. `Google Wallet`) → tap **Edit List** under *Apps Visible* → add **Google Wallet** → back out
+2. **Manage Apps** → find **Google Wallet** → tap it → enable **Hide**
+3. **Template Config**:
+   - Enable **Work Mode: Whitelist**
+   - Under **Templates** → check your whitelist template
+
+---
+
 ### FuseFixer (if needed)
 
 If a detector reports a **FUSE error**, install **FuseFixer** — shared via Telegram. This is the last thing to install.
