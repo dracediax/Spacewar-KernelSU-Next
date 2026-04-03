@@ -437,16 +437,9 @@ fi
 
 7z x -y image-boot.7z
 STOCK_BOOT=$(find . -maxdepth 2 -name "boot.img" ! -path "./AnyKernel3/*" | head -1)
+STOCK_VBMETA=$(find . -maxdepth 2 -name "vbmeta.img" | head -1)
+[ -n "$STOCK_VBMETA" ] && cp "$STOCK_VBMETA" "$OUTPUT_DIR/vbmeta.img" && echo "vbmeta.img extracted from boot archive"
 rm -f image-boot.7z
-
-# Download vbmeta.img (must be flashed with --disable-verity --disable-verification)
-# vbmeta.img is packed inside image-firmware.7z alongside modem, abl, etc.
-curl -L "https://github.com/spike0en/nothing_archive/releases/download/${LATEST_TAG}/${LATEST_TAG}-image-firmware.7z" \
-    -o firmware.7z || die "firmware archive download failed"
-7z e -y firmware.7z vbmeta.img -o"$OUTPUT_DIR" || die "vbmeta.img not found in firmware archive"
-[ -f "$OUTPUT_DIR/vbmeta.img" ] || die "vbmeta.img missing after extraction"
-echo "vbmeta.img extracted (stock: $LATEST_TAG)"
-rm -f firmware.7z
 
 # Extract stock ramdisk byte-exact (no decompression — preserves cpio integrity)
 python3 -c "

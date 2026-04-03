@@ -366,6 +366,8 @@ jobs:
 
           7z x -y image-boot.7z
           STOCK_BOOT=$(find . -maxdepth 2 -name "boot.img" ! -path "./AnyKernel3/*" | head -1)
+          STOCK_VBMETA=$(find . -maxdepth 2 -name "vbmeta.img" | head -1)
+          [ -n "$STOCK_VBMETA" ] && cp "$STOCK_VBMETA" "$OUTPUT_DIR/vbmeta.img" && echo "vbmeta.img extracted from boot archive"
           rm -f image-boot.7z
 
           python3 -c "
@@ -392,19 +394,6 @@ jobs:
             --salt 13f0b0127083a4a62c8897ee82ac3e0099f015d997031ef05fe759a8adf28f65
 
           rm -f "$OUTPUT_DIR/stock_ramdisk.gz"
-
-      # ── Download vbmeta.img ───────────────────────────
-      - name: Download vbmeta.img
-        run: |
-          OUTPUT_DIR="$GITHUB_WORKSPACE/output"
-          LATEST_TAG="${{ steps.os_version.outputs.stock_tag }}"
-          mkdir -p "$OUTPUT_DIR"
-          curl -L "https://github.com/spike0en/nothing_archive/releases/download/${LATEST_TAG}/${LATEST_TAG}-image-firmware.7z" \
-            -o firmware.7z || { echo "ERROR: firmware archive download failed"; exit 1; }
-          7z e -y firmware.7z vbmeta.img -o"$OUTPUT_DIR" || { echo "ERROR: vbmeta.img not found in firmware archive"; exit 1; }
-          [ -f "$OUTPUT_DIR/vbmeta.img" ] || { echo "ERROR: vbmeta.img missing after extraction"; exit 1; }
-          echo "vbmeta.img extracted ($(du -sh "$OUTPUT_DIR/vbmeta.img" | cut -f1), stock: $LATEST_TAG)"
-          rm -f firmware.7z
 
       # ── Package AnyKernel3 ZIP ────────────────────────
       - name: Package AnyKernel3 ZIP
