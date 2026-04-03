@@ -476,7 +476,7 @@ jobs:
 
             ### Quick Start
 
-            **Fastboot (recommended):**
+            **Fastboot:**
             ```
             fastboot flash boot boot.img
             fastboot flash vbmeta_a --disable-verity --disable-verification vbmeta.img
@@ -484,25 +484,11 @@ jobs:
             fastboot reboot
             ```
 
-            **Recovery (AnyKernel3 zip):** flash the zip, then from fastboot:
-            ```
-            fastboot flash vbmeta_a --disable-verity --disable-verification vbmeta.img
-            fastboot flash vbmeta_b --disable-verity --disable-verification vbmeta.img
-            fastboot reboot
-            ```
-
             1. Install [KernelSU-Next Manager](https://github.com/KernelSU-Next/KernelSU-Next/releases)
-            2. Follow the [Root Hiding Setup](https://github.com/dracediax/Spacewar-KernelSU-Next#-root-hiding-setup) guide
+            2. Follow the [Root Hiding & Integrity Setup](https://github.com/dracediax/Spacewar-KernelSU-Next#-root-hiding--integrity-setup) guide
 
-            ### Included extras
-            - `LSPosed-v1.9.2-it-7455-release.zip` — only compatible LSPosed version
-            - `dmverity-props-spoof-v1.1.zip` — fixes partition.*.verified props
-            - `HMA-OSS_config.json` — pre-made root hiding config
           files: |
             output/boot.img
             output/vbmeta.img
             output/${{ steps.package.outputs.zip_name }}
-            output/LSPosed-v1.9.2-it-7455-release.zip
-            output/HMA-OSS_config.json
-            output/dmverity-props-spoof-v1.1.zip
             output/module-update-checker-v1.0.zip
