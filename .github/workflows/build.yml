@@ -477,13 +477,13 @@ jobs:
             **Fastboot (recommended):**
             ```
             fastboot flash boot boot.img
-            fastboot flash vbmeta --disable-verity --disable-verification vbmeta.img
+            fastboot --slot all flash vbmeta --disable-verity --disable-verification vbmeta.img
             fastboot reboot
             ```
 
             **Recovery (AnyKernel3 zip):** flash the zip, then from fastboot:
             ```
-            fastboot flash vbmeta --disable-verity --disable-verification vbmeta.img
+            fastboot --slot all flash vbmeta --disable-verity --disable-verification vbmeta.img
             fastboot reboot
             ```
 
