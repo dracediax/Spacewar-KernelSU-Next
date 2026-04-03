@@ -36,7 +36,8 @@
 <table>
 <tr><td>🔓</td><td><strong>KernelSU-Next</strong></td><td>Modern kernel-based root</td></tr>
 <tr><td>🛡️</td><td><strong>SUSFS v2.0.0</strong></td><td>Kernel-level root hiding</td></tr>
-<tr><td>🏦</td><td><strong>Root hiding stack</strong></td><td>Pass banking apps, Play Integrity, root detectors</td></tr>
+<tr><td>🏦</td><td><strong>Root hiding stack</strong></td><td><a href="#-root-hiding--integrity-setup">Pass banking apps, Play Integrity, root detectors</a></td></tr>
+<tr><td>🛠️</td><td><strong>Custom build</strong></td><td><a href="#%EF%B8%8F-custom-build-from-source">Build from source</a></td></tr>
 </table>
 
 ---
