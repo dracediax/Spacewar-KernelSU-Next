@@ -69,13 +69,13 @@ Install modules **in order** through the KernelSU-Next manager, then reboot.
 |:----:|--------|----------|
 | **1** | SUSFS for KSU | [📥 Latest release](https://github.com/sidex15/susfs4ksu-module/releases) |
 | **2** | Vector (LSPosed) | [📥 Latest release](https://github.com/JingMatrix/Vector/releases) |
-| **3** | Zygisk — pick one: NeoZygisk or ZygiskNext | [📥 NeoZygisk](https://github.com/JingMatrix/NeoZygisk/releases) · [📥 ZygiskNext](https://github.com/Dr-TSNG/ZygiskNext/releases) |
+| **3** | ZygiskNext | [📥 Latest release](https://github.com/Dr-TSNG/ZygiskNext/releases) |
 | **4** | TeeSimulator-RS | [📥 Latest release](https://github.com/Enginex0/TEESimulator-RS/releases) |
 | **5** | Tricky Addon | [📥 Latest release](https://github.com/KOWX712/Tricky-Addon-Update-Target-List/releases) |
 | **6** | YuriKey | [📥 Latest release](https://github.com/Yurii0307/yurikey/releases) |
 | **7** | NoHello | [📥 Latest release](https://github.com/MhmRdd/NoHello/releases) |
 
-> Steps 3 (NeoZygisk), 5, and 7 require no configuration — install and continue.
+> Steps 5 and 7 require no configuration — install and continue.
 
 ---
 
@@ -117,7 +117,7 @@ Under **Custom SUS Feature → Custom SUS Path**, paste all paths at once and ta
 
 ---
 
-### 3 · Configure ZygiskNext (ZygiskNext only — NeoZygisk needs no config)
+### 3 · Configure ZygiskNext
 
 1. KernelSU-Next manager → **Modules** → **ZygiskNext** → tap the **action button** to open the WebUI
 2. Set **Denylist policy** → **Unmount only**
