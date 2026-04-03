@@ -173,7 +173,7 @@ Under **Custom SUS Feature → Custom SUS Path**, paste all paths at once and ta
 
 #### Make Google Wallet work
 
-1. **Manage Templates** → **Create** → name it (e.g. `Google Wallet`) → tap **Edit List** under *Apps Visible* → add **Google Wallet** → back out
+1. **Manage Templates** → **Create** → select **Whitelist** → name it (e.g. `Google Wallet`) → tap **Edit List** under *Apps Visible* → add **Google Wallet** → back out
 2. **Manage Apps** → find **Google Wallet** → tap it → enable **Hide**
 3. **Template Config**:
    - Enable **Work Mode: Whitelist**
