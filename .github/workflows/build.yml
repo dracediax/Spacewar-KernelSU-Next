@@ -366,8 +366,6 @@ jobs:
 
           7z x -y image-boot.7z
           STOCK_BOOT=$(find . -maxdepth 2 -name "boot.img" ! -path "./AnyKernel3/*" | head -1)
-          STOCK_VBMETA=$(find . -maxdepth 2 -name "vbmeta.img" | head -1)
-          [ -n "$STOCK_VBMETA" ] && cp "$STOCK_VBMETA" "$OUTPUT_DIR/vbmeta.img" && echo "vbmeta.img extracted from boot archive"
           rm -f image-boot.7z
 
           python3 -c "
@@ -392,6 +390,12 @@ jobs:
             --partition_size 100663296 --partition_name boot \
             --hash_algorithm sha256 --algorithm NONE \
             --salt 13f0b0127083a4a62c8897ee82ac3e0099f015d997031ef05fe759a8adf28f65
+
+          python3 "$AVBTOOL" make_vbmeta_image \
+            --flags 3 \
+            --algorithm NONE \
+            --output "$OUTPUT_DIR/vbmeta.img"
+          echo "vbmeta.img generated (flags=3: hashtree+verification disabled)"
 
           rm -f "$OUTPUT_DIR/stock_ramdisk.gz"
 
@@ -479,15 +483,15 @@ jobs:
             **Fastboot (recommended):**
             ```
             fastboot flash boot boot.img
-            fastboot flash vbmeta_a --disable-verity --disable-verification vbmeta.img
-            fastboot flash vbmeta_b --disable-verity --disable-verification vbmeta.img
+            fastboot flash vbmeta_a vbmeta.img
+            fastboot flash vbmeta_b vbmeta.img
             fastboot reboot
             ```
 
             **Recovery (AnyKernel3 zip):** flash the zip, then from fastboot:
             ```
-            fastboot flash vbmeta_a --disable-verity --disable-verification vbmeta.img
-            fastboot flash vbmeta_b --disable-verity --disable-verification vbmeta.img
+            fastboot flash vbmeta_a vbmeta.img
+            fastboot flash vbmeta_b vbmeta.img
             fastboot reboot
             ```
 

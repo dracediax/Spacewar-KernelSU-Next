@@ -55,8 +55,8 @@
 
 ```
 fastboot flash boot boot.img
-fastboot flash vbmeta_a --disable-verity --disable-verification vbmeta.img
-fastboot flash vbmeta_b --disable-verity --disable-verification vbmeta.img
+fastboot flash vbmeta_a vbmeta.img
+fastboot flash vbmeta_b vbmeta.img
 fastboot reboot
 ```
 
@@ -68,8 +68,8 @@ fastboot reboot
 Flash `Spacewar_NOS3.2_KernelSU-Next_*.zip` via recovery or a kernel manager app, then from fastboot:
 
 ```
-fastboot flash vbmeta_a --disable-verity --disable-verification vbmeta.img
-fastboot flash vbmeta_b --disable-verity --disable-verification vbmeta.img
+fastboot flash vbmeta_a vbmeta.img
+fastboot flash vbmeta_b vbmeta.img
 fastboot reboot
 ```
 
