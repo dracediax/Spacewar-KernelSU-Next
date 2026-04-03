@@ -439,6 +439,16 @@ fi
 STOCK_BOOT=$(find . -maxdepth 2 -name "boot.img" ! -path "./AnyKernel3/*" | head -1)
 rm -f image-boot.7z
 
+# Download vbmeta.img (must be flashed with --disable-verity --disable-verification)
+if curl -sfL "https://github.com/spike0en/nothing_archive/releases/download/${LATEST_TAG}/${LATEST_TAG}-image-vbmeta.7z" -o vbmeta.7z; then
+    7z x -y vbmeta.7z
+    STOCK_VBMETA=$(find . -maxdepth 2 -name "vbmeta.img" | head -1)
+    [ -n "$STOCK_VBMETA" ] && cp "$STOCK_VBMETA" "$OUTPUT_DIR/vbmeta.img" && echo "vbmeta.img downloaded (stock: $LATEST_TAG)"
+    rm -f vbmeta.7z
+else
+    echo "   Warning: vbmeta.img not found for $LATEST_TAG — skipping"
+fi
+
 # Extract stock ramdisk byte-exact (no decompression — preserves cpio integrity)
 python3 -c "
 import struct
@@ -542,6 +552,7 @@ echo "DONE! Build completed in $((SECONDS / 60))m $((SECONDS % 60))s"
 echo ""
 echo "Artifacts in $OUTPUT_DIR/:"
 echo "  - boot.img"
+[ -f "$OUTPUT_DIR/vbmeta.img" ] && echo "  - vbmeta.img"
 echo "  - $ZIP_NAME"
 echo ""
 KREL=$(cat "$RAW_DIR/include/config/kernel.release" 2>/dev/null || echo "${KERNEL_VER}-qgki")
@@ -550,6 +561,15 @@ echo "  KernelSU-Next: v${KSU_VERSION} (${KSU_BRANCH})"
 echo "  Kernel: ${KERNEL_VER}"
 echo "  Stock boot: ${LATEST_TAG}"
 echo ""
+if [ -f "$OUTPUT_DIR/vbmeta.img" ]; then
+echo "  ┌─ Flash commands (fastboot) ──────────────────────────────────────────┐"
+echo "  │ fastboot flash boot boot.img                                         │"
+echo "  │ fastboot flash vbmeta --disable-verity --disable-verification \       │"
+echo "  │         vbmeta.img                                                   │"
+echo "  │ fastboot reboot                                                      │"
+echo "  └──────────────────────────────────────────────────────────────────────┘"
+echo ""
+fi
 echo "  ┌─ For SUSFS uname spoof ─────────────────────┐"
 echo "  │ Kernel version:  ${KREL}"
 echo "  │ Kernel build:    Use 'Set Stock Kernel Build Date'"

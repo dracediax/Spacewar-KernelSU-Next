@@ -365,6 +365,22 @@ jobs:
 
           rm -f "$OUTPUT_DIR/stock_ramdisk.gz"
 
+      # ── Download vbmeta.img ───────────────────────────
+      - name: Download vbmeta.img
+        run: |
+          KERNEL_DIR="$GITHUB_WORKSPACE/SpacewarKernelBuilder/android_kernel_msm-5.4_nothing_sm7325"
+          OUTPUT_DIR="$GITHUB_WORKSPACE/output"
+          LATEST_TAG="${{ steps.os_version.outputs.stock_tag }}"
+          cd "$KERNEL_DIR"
+          if curl -sfL "https://github.com/spike0en/nothing_archive/releases/download/${LATEST_TAG}/${LATEST_TAG}-image-vbmeta.7z" -o vbmeta.7z; then
+            7z x -y vbmeta.7z
+            STOCK_VBMETA=$(find . -maxdepth 2 -name "vbmeta.img" | head -1)
+            [ -n "$STOCK_VBMETA" ] && cp "$STOCK_VBMETA" "$OUTPUT_DIR/vbmeta.img"
+            rm -f vbmeta.7z
+          else
+            echo "vbmeta.img not found for $LATEST_TAG — skipping"
+          fi
+
       # ── Package AnyKernel3 ZIP ────────────────────────
       - name: Package AnyKernel3 ZIP
         id: package
@@ -445,9 +461,22 @@ jobs:
             Build ID: `ksu-${{ needs.check.outputs.ksu_commit }}_kernel-${{ needs.check.outputs.kernel_commit }}`
 
             ### Quick Start
-            1. Flash `boot.img` via fastboot or the AnyKernel3 zip via recovery
-            2. Install [KernelSU-Next Manager](https://github.com/KernelSU-Next/KernelSU-Next/releases)
-            3. Follow the [Root Hiding Setup](https://github.com/dracediax/Spacewar-KernelSU-Next#-root-hiding-setup) guide
+
+            **Fastboot (recommended):**
+            ```
+            fastboot flash boot boot.img
+            fastboot flash vbmeta --disable-verity --disable-verification vbmeta.img
+            fastboot reboot
+            ```
+
+            **Recovery (AnyKernel3 zip):** flash the zip, then from fastboot:
+            ```
+            fastboot flash vbmeta --disable-verity --disable-verification vbmeta.img
+            fastboot reboot
+            ```
+
+            1. Install [KernelSU-Next Manager](https://github.com/KernelSU-Next/KernelSU-Next/releases)
+            2. Follow the [Root Hiding Setup](https://github.com/dracediax/Spacewar-KernelSU-Next#-root-hiding-setup) guide
 
             ### Included extras
             - `LSPosed-v1.9.2-it-7455-release.zip` — only compatible LSPosed version
@@ -455,6 +484,7 @@ jobs:
             - `HMA-OSS_config.json` — pre-made root hiding config
           files: |
             output/boot.img
+            output/vbmeta.img
             output/${{ steps.package.outputs.zip_name }}
             output/LSPosed-v1.9.2-it-7455-release.zip
             output/HMA-OSS_config.json
