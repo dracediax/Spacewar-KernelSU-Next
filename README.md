@@ -75,6 +75,8 @@ Install modules **in order** through the KernelSU-Next manager, then reboot.
 | **6** | YuriKey | [📥 Latest release](https://github.com/Yurii0307/yurikey/releases) |
 | **7** | NoHello | [📥 Latest release](https://github.com/MhmRdd/NoHello/releases) |
 
+> Steps 3 (NeoZygisk), 5, and 7 require no configuration — install and continue.
+
 ---
 
 ### 1 · Configure SUSFS
@@ -115,7 +117,7 @@ Under **Custom SUS Feature → Custom SUS Path**, paste all paths at once and ta
 
 ---
 
-### 3 · Configure ZygiskNext (if you chose ZygiskNext)
+### 3 · Configure ZygiskNext (ZygiskNext only — NeoZygisk needs no config)
 
 1. KernelSU-Next manager → **Modules** → **ZygiskNext** → tap the **action button** to open the WebUI
 2. Set **Denylist policy** → **Unmount only**
