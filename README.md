@@ -37,8 +37,6 @@
 <tr><td>🔓</td><td><strong>KernelSU-Next</strong></td><td>Modern kernel-based root</td></tr>
 <tr><td>🛡️</td><td><strong>SUSFS v2.0.0</strong></td><td>Kernel-level root hiding</td></tr>
 <tr><td>🏦</td><td><strong>Root hiding stack</strong></td><td>Pass banking apps, Play Integrity, root detectors</td></tr>
-<tr><td>📦</td><td><strong>Vendor modules</strong></td><td>Audio, camera, display, BT — all included</td></tr>
-<tr><td>🔐</td><td><strong>vbmeta.img</strong></td><td>Pre-patched stock vbmeta — disables dm-verity at the bootloader level</td></tr>
 </table>
 
 ---
