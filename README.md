@@ -103,8 +103,6 @@ Under **Custom SUS Feature → Custom SUS Path**, paste all paths at once and ta
 /sys/fs/selinux
 ```
 
-**⟳ Reboot.**
-
 ---
 
 ### 2 · Activate Vector (LSPosed)
@@ -113,7 +111,7 @@ Under **Custom SUS Feature → Custom SUS Path**, paste all paths at once and ta
 
 1. KernelSU-Next manager → **Modules** → **Vector** → tap the **action button**
 2. In Vector → **Modules** → **HMA-OSS** → enable → check **System Framework**
-3. **⟳ Reboot**
+3. **⟳ Reboot if necessary**
 
 ---
 
@@ -124,8 +122,6 @@ Under **Custom SUS Feature → Custom SUS Path**, paste all paths at once and ta
 3. Toggle on:
    - ✅ Use anonymous memory
    - ✅ Use Zygisk Next Linker
-
-**⟳ Reboot.**
 
 ---
 
@@ -142,8 +138,6 @@ Under **Custom SUS Feature → Custom SUS Path**, paste all paths at once and ta
    - Google Wallet
 3. If you have detector apps installed (e.g. YASNAC, Native Detector, DUCK Detector), toggle those on as well.
 
-**⟳ Reboot.**
-
 ---
 
 ### 6 · Configure YuriKey
@@ -159,13 +153,13 @@ Under **Custom SUS Feature → Custom SUS Path**, paste all paths at once and ta
    - Clear all detection traces
    - Set HMA-OSS configs
 
-**⟳ Reboot.**
-
 ---
 
 ### FuseFixer (if needed)
 
 If a detector reports a **FUSE error**, install **FuseFixer** — shared via Telegram. This is the last thing to install.
+
+**⟳ Reboot.**
 
 ✅ **Done** — root is hidden and your device passes Strong Play Integrity.
 
