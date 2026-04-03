@@ -23,7 +23,7 @@
 ---
 
 <p align="center">
-  <a href="#-quick-start"><b>📦 Quick Start</b></a>&nbsp;&nbsp;·&nbsp;&nbsp;<a href="#-root-hiding-setup"><b>🔒 Root Hiding</b></a>&nbsp;&nbsp;·&nbsp;&nbsp;<a href="#%EF%B8%8F-pass-strong-play-integrity"><b>🛡️ Play Integrity</b></a>&nbsp;&nbsp;·&nbsp;&nbsp;<a href="#%EF%B8%8F-custom-build-from-source"><b>🛠️ Custom Build</b></a>
+  <a href="#-quick-start"><b>📦 Quick Start</b></a>&nbsp;&nbsp;·&nbsp;&nbsp;<a href="#-root-hiding--integrity-setup"><b>🔒 Root Hiding & Integrity</b></a>&nbsp;&nbsp;·&nbsp;&nbsp;<a href="#%EF%B8%8F-custom-build-from-source"><b>🛠️ Custom Build</b></a>
 </p>
 
 ---
@@ -38,7 +38,7 @@
 <tr><td>🛡️</td><td><strong>SUSFS v2.0.0</strong></td><td>Kernel-level root hiding</td></tr>
 <tr><td>🏦</td><td><strong>Root hiding stack</strong></td><td>Pass banking apps, Play Integrity, root detectors</td></tr>
 <tr><td>📦</td><td><strong>Vendor modules</strong></td><td>Audio, camera, display, BT — all included</td></tr>
-<tr><td>🔐</td><td><strong>vbmeta.img</strong></td><td>Pre-patched stock vbmeta — disables dm-verity so partition props don't need spoofing</td></tr>
+<tr><td>🔐</td><td><strong>vbmeta.img</strong></td><td>Pre-patched stock vbmeta — disables dm-verity at the bootloader level</td></tr>
 </table>
 
 ---
@@ -48,12 +48,9 @@
 ### Flash the Kernel
 
 > [!NOTE]
-> **Always flash `vbmeta.img` alongside the kernel.** This disables dm-verity at the bootloader level so the `partition.system.verified` / `partition.vendor.verified` props report correctly on their own — no spoof module needed. Without it those props expose the custom kernel to detection apps and banking apps.
-> 
+> **Always flash `vbmeta.img` alongside the kernel.**
+>
 > ⚠️ **Use [platform-tools r34.0.4](https://dl.google.com/android/repository/platform-tools_r34.0.4-windows.zip)** — newer versions have a bug parsing the vbmeta image and will error with `Failed to find AVB_MAGIC`.
-
-<details>
-<summary><strong>Option A — Fastboot (recommended)</strong></summary>
 
 ```
 fastboot flash boot boot.img
@@ -62,34 +59,11 @@ fastboot flash vbmeta_b --disable-verity --disable-verification vbmeta.img
 fastboot reboot
 ```
 
-</details>
-
-<details>
-<summary><strong>Option B — Already rooted (AnyKernel3 zip)</strong></summary>
-
-Flash `Spacewar_NOS3.2_KernelSU-Next_*.zip` via recovery or a kernel manager app, then from fastboot:
-
-```
-fastboot flash vbmeta_a --disable-verity --disable-verification vbmeta.img
-fastboot flash vbmeta_b --disable-verity --disable-verification vbmeta.img
-fastboot reboot
-```
-
-</details>
-
-<details>
-<summary><strong>Need temporary root first?</strong></summary>
-
-Grab a Magisk-patched boot.img for your NOS version from the
-[XDA Nothing Phone 1 repo](https://xdaforums.com/t/nothing-phone-1-repo-nos-ota-img-guide-root.4464039/#post-87101175).
-
-</details>
-
 Then install [**KernelSU-Next Manager**](https://github.com/KernelSU-Next/KernelSU-Next/releases) (v3.1.0+).
 
 ---
 
-## 🔒 Root Hiding Setup
+## 🔒 Root Hiding & Integrity Setup
 
 Install modules **in order** through the KernelSU-Next manager.<br>
 **⟳ Reboot after each one.**
@@ -97,88 +71,106 @@ Install modules **in order** through the KernelSU-Next manager.<br>
 | Step | Module | Download |
 |:----:|--------|----------|
 | **1** | SUSFS for KSU | [📥 Latest release](https://github.com/sidex15/susfs4ksu-module/releases) |
-| **2** | ReZygisk | [📥 Latest release](https://github.com/PerformanC/ReZygisk/releases) |
-| **3** | DM-Verity Props Spoof | [📥 v1.1](https://github.com/dracediax/Spacewar-KernelSU-Next/releases/latest/download/dmverity-props-spoof-v1.1.zip) — **skip if you flashed `vbmeta.img`** |
-| **4** | LSPosed IT | [📥 v1.9.2-7455](https://github.com/dracediax/Spacewar-KernelSU-Next/releases/latest/download/LSPosed-v1.9.2-it-7455-release.zip) ⚠️ **Only this version works** |
-
-### Configure SUSFS
-
-Open the **susfs4ksu** module settings (KSU manager → Modules → susfs4ksu → action button) and enable:
-
-- ✅ Hide sus mounts for all non-su processes
-- ✅ Auto try umount (userspace)
-- ✅ Spoof cmdline
-- ✅ Hide KSU loop
-- ✅ AVC log spoofing
-- ✅ Spoof kernel version → set to `5.4.289-qgki-g0297a1324ba1`
-- ✅ Spoof kernel build → tap **Set Stock Kernel Build Date**
-- ✅ Spoof on boot / Execute on post-fs-data
-
-Then tap **Make it sus** and reboot.
-
-> The kernel version string is printed after every build. Use it for the spoof value.
-
-### Activate HMA-OSS
-
-> Install the [HMA-OSS](https://github.com/frknkrc44/HMA-OSS/releases) app first.
-
-1. KernelSU-Next manager → **Modules** → **LSPosed** → tap the **action button**
-2. In LSPosed → **Modules** → **HMA-OSS** → enable → check **System Framework**
-3. **⟳ Reboot**
-
-### Import HMA-OSS Config
-
-> Download [`HMA-OSS_config.json`](https://github.com/dracediax/Spacewar-KernelSU-Next/releases/latest/download/HMA-OSS_config.json) to your phone.
-
-1. Open HMA-OSS — confirm **"Module Activated"** and **"System service running"**
-2. Tap **Restore config** → select the downloaded file
-
-✅ **Done** — root is hidden from common detection apps.
-
-<details>
-<summary><strong>Manually hide a specific app</strong></summary>
-
-<br>
-
-If an app isn't covered by the config, you can add it manually:
-
-1. Open HMA-OSS → **Manage apps**
-2. Find and tap the app you want to hide root from
-3. Toggle **Enable hide** ON
-4. **Template config** → enable **HIDE MY CUSTOM APP**
-5. **Using presets** → check all 6:
-   - Custom ROM apps · Detector/Checker apps · Root managers/Rooted apps
-   - Shizuku/Dhizuku apps · Suspicious apps · LSPosed/Xposed modules
-6. **Settings presets** → check all 3:
-   - Accessibility · Developer options · Input method
-
-</details>
+| **2** | Vector (LSPosed) | [📥 Latest release](https://github.com/JingMatrix/Vector/releases) |
+| **3** | Zygisk — pick one: NeoZygisk or ZygiskNext | [📥 NeoZygisk](https://github.com/JingMatrix/NeoZygisk/releases) · [📥 ZygiskNext](https://github.com/Dr-TSNG/ZygiskNext/releases) |
+| **4** | TeeSimulator-RS | [📥 Latest release](https://github.com/Enginex0/TEESimulator-RS/releases) |
+| **5** | Tricky Addon | [📥 Latest release](https://github.com/KOWX712/Tricky-Addon-Update-Target-List/releases) |
+| **6** | YuriKey | [📥 Latest release](https://github.com/Yurii0307/yurikey/releases) |
+| **7** | NoHello | [📥 Latest release](https://github.com/MhmRdd/NoHello/releases) |
 
 ---
 
-## 🛡️ Pass Strong Play Integrity
+### 1 · Configure SUSFS
 
-Want to pass **MEETS_STRONG_INTEGRITY**? Install these modules after completing the root hiding setup above.
+Open the **susfs4ksu** module settings (KSU manager → Modules → susfs4ksu → action button) and enable:
 
-Install **in order** through the KernelSU-Next manager. **⟳ Reboot after each one.**
+- ✅ **Auto try unmount (userspace)**
+- ✅ **Hide sus_mounts** — for all processes / non-su processes
+- ✅ **Turn off after boot-completed**
 
-| Step | Module | Download |
-|:----:|--------|----------|
-| **1** | Play Integrity Fix | [📥 Latest release](https://github.com/KOWX712/PlayIntegrityFix/releases) |
-| **2** | TrickyStore | [📥 Latest release](https://github.com/KernelSU-Modules-Repo/tricky_store/releases) |
-| **3** | Tricky Addon | [📥 Latest release](https://github.com/KOWX712/Tricky-Addon-Update-Target-List/releases) |
-| **4** | YuriKey | [📥 Latest release](https://github.com/Yurii0307/yurikey/releases) |
+Under **Custom SUSFS Settings** enable:
 
-### Get Your Keybox
+- ✅ Spoof cmdline
+- ✅ Hide KSU loop
+- ✅ AVC log spoofing
+- ✅ Hide vendor sepolicy
+- ✅ Hide compat matrix
 
-After installing all 4 modules and rebooting:
+Under **Custom SUS Feature → Custom SUS Path**, add each of the following paths and tap **Make it sus** after each:
+
+```
+/proc/*/maps
+/proc/*/smaps
+/proc/*/status
+/proc/*/task/*/status
+/sys/fs/selinux
+```
+
+**⟳ Reboot.**
+
+---
+
+### 2 · Activate Vector (LSPosed)
+
+> Install the [HMA-OSS](https://github.com/frknkrc44/HMA-OSS/releases) app first.
+
+1. KernelSU-Next manager → **Modules** → **Vector** → tap the **action button**
+2. In Vector → **Modules** → **HMA-OSS** → enable → check **System Framework**
+3. **⟳ Reboot**
+
+---
+
+### 3 · Configure ZygiskNext (if you chose ZygiskNext)
+
+1. KernelSU-Next manager → **Modules** → **ZygiskNext** → tap the **action button** to open the WebUI
+2. Set **Denylist policy** → **Unmount only**
+3. Toggle on:
+   - ✅ Use anonymous memory
+   - ✅ Use Zygisk Next Linker
+
+**⟳ Reboot.**
+
+---
+
+### 4 · Configure TeeSimulator-RS
+
+1. KernelSU-Next manager → **Modules** → **TeeSimulator-RS** → tap the **action button** to open the WebUI
+2. Toggle **on** every app that root needs to be hidden from. Typical apps to hide from:
+   - Android System Key Verifier
+   - Android System SafetyCore
+   - Carrier Services
+   - Google Play Services
+   - Google Play Store
+   - Google Services Framework
+   - Google Wallet
+3. If you have detector apps installed (e.g. YASNAC, Native Detector, DUCK Detector), toggle those on as well.
+
+**⟳ Reboot.**
+
+---
+
+### 6 · Configure YuriKey
 
 1. KernelSU-Next manager → **Modules** → **YuriKey** → tap the **action button**
-2. YuriKey fetches a valid keybox automatically — no manual setup needed
+2. Go to **Menu** and run these scripts in order:
+   - Set up Yuri Keybox
+   - Force stop & clear data Play Store
+   - Set up target.txt — only set necessary apps
+   - Set up security patch
+   - Set up verified boot hash
+3. Go to **Menu+** and run:
+   - Clear all detection traces
+   - Set HMA-OSS configs
 
-> **Keeping it working:** When YuriKey gets an update, install the new version, then press the action button again to refresh the keybox.
+**⟳ Reboot.**
 
-✅ **Done** — your device now passes Strong Play Integrity.
+---
+
+### FuseFixer (if needed)
+
+If a detector reports a **FUSE error**, install **FuseFixer** — shared via Telegram. This is the last thing to install.
+
+✅ **Done** — root is hidden and your device passes Strong Play Integrity.
 
 ---
 
