@@ -79,7 +79,7 @@ Install modules **in order** through the KernelSU-Next manager, then **reboot on
 
 ### Configure SUSFS
 
-Open the **susfs4ksu** module settings (KSU manager → Modules → susfs4ksu → action button) and enable:
+Open the **susfs4ksu** module settings (KSU manager → Modules → susfs4ksu → WebUI button) and enable:
 
 - ✅ **Auto try unmount (userspace)**
 - ✅ **Hide sus_mounts** — for all processes / non-su processes
@@ -109,7 +109,7 @@ Under **Custom SUS Feature → Custom SUS Path**, paste all paths at once and ta
 
 > Install the [HMA-OSS](https://github.com/frknkrc44/HMA-OSS/releases) app first.
 
-1. KernelSU-Next manager → **Modules** → **Vector** → tap the **action button**
+1. KernelSU-Next manager → **Modules** → **Vector** → tap the **WebUI button**
 2. In Vector → **Modules** → **HMA-OSS** → enable → check **System Framework**
 3. **⟳ Reboot if LSPosed asks — it may require one after enabling HMA-OSS**
 
@@ -117,7 +117,7 @@ Under **Custom SUS Feature → Custom SUS Path**, paste all paths at once and ta
 
 ### Configure ZygiskNext
 
-1. KernelSU-Next manager → **Modules** → **ZygiskNext** → tap the **action button** to open the WebUI
+1. KernelSU-Next manager → **Modules** → **ZygiskNext** → tap the **WebUI button**
 2. Set **Denylist policy** → **Unmount only**
 3. Toggle on:
    - ✅ Use anonymous memory
@@ -142,7 +142,7 @@ Under **Custom SUS Feature → Custom SUS Path**, paste all paths at once and ta
 
 ### Configure TeeSimulator-RS
 
-1. KernelSU-Next manager → **Modules** → **TeeSimulator-RS** → tap the **action button** to open the WebUI
+1. KernelSU-Next manager → **Modules** → **TeeSimulator-RS** → tap the **WebUI button**
 2. Toggle **on** every app that root needs to be hidden from. Typical apps to hide from:
    - Android System Key Verifier
    - Android System SafetyCore
