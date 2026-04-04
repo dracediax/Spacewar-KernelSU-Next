@@ -192,7 +192,17 @@ This is **informational, not a failure**. TrickyStore correctly throws a keystor
 
 ## 🔄 Google Pay / GMS Full Reset
 
-If Google Pay attestation fails (`fails_attestation = 1`) after setup or after changing your keybox, do a full clean reset:
+To check attestation status:
+
+```sh
+# ADB
+adb shell dumpsys gservices | grep fails_attestation
+
+# Termux
+dumpsys gservices | grep fails_attestation
+```
+
+If the result shows `fails_attestation = 1` after setup or after changing your keybox, do a full clean reset:
 
 **From a PC (ADB):**
 
