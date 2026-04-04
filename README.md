@@ -132,7 +132,6 @@ Under **Custom SUS Feature → Custom SUS Path**, paste all paths at once and ta
    - Force stop & clear data Play Store
    - Set up target.txt — only set necessary apps
    - Set up security patch
-   - Set up verified boot hash
 3. Go to **Menu+** and run:
    - Clear all detection traces
    - Set HMA-OSS configs — this imports the HMA-OSS configuration
