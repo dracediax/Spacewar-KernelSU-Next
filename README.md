@@ -79,21 +79,17 @@ Install modules **in order** through the KernelSU-Next manager, then **reboot on
 <details>
 <summary><strong>Configure SUSFS</strong></summary>
 
-Open the **susfs4ksu** module settings (KSU manager → Modules → susfs4ksu → WebUI button) and enable:
+Open the **susfs4ksu** WebUI (KSU manager → Modules → susfs4ksu → WebUI button). Enable the highlighted settings in **Auto Hide Settings**, then tap **Custom SUSFS Settings**.
 
-- ✅ **Auto try unmount (userspace)**
-- ✅ **Hide sus_mounts** — for all processes / non-su processes
-- ✅ **Turn off after boot-completed**
+<img src="assets/susfs_main.png" width="320">
 
-Under **Custom SUSFS Settings** enable:
+In **Custom SUSFS Settings**, enable the highlighted toggles:
 
-- ✅ Spoof cmdline
-- ✅ Hide KSU loop
-- ✅ AVC log spoofing
-- ✅ Hide vendor sepolicy
-- ✅ Hide compat matrix
+<img src="assets/susfs_custom.png" width="320">
 
-Under **Custom SUS Feature → Custom SUS Path**, paste all paths at once and tap **Make it sus**:
+Under **Custom SUS Feature → Custom SUS Path**, paste the paths and tap **Make it Sus**:
+
+<img src="assets/susfs_paths.png" width="320">
 
 ```
 /proc/*/maps
@@ -102,6 +98,17 @@ Under **Custom SUS Feature → Custom SUS Path**, paste all paths at once and ta
 /proc/*/task/*/status
 /sys/fs/selinux
 ```
+
+</details>
+
+---
+
+<details>
+<summary><strong>Spoof Kernel uname (SUSFS)</strong></summary>
+
+In the SUSFS WebUI, scroll to **Kernel uname**. Enable **Spoof on Boot** and **Execute on post-fs-data**, then tap **Set Stock Kernel Build Date** to spoof the kernel build string so detectors can't fingerprint the kernel.
+
+<img src="assets/susfs_uname.png" width="320">
 
 </details>
 
@@ -123,11 +130,9 @@ Under **Custom SUS Feature → Custom SUS Path**, paste all paths at once and ta
 <details>
 <summary><strong>Configure ZygiskNext</strong></summary>
 
-1. KernelSU-Next manager → **Modules** → **ZygiskNext** → tap the **WebUI button**
-2. Set **Denylist policy** → **Unmount only**
-3. Toggle on:
-   - ✅ Use anonymous memory
-   - ✅ Use Zygisk Next Linker
+KernelSU-Next manager → **Modules** → **ZygiskNext** → **WebUI**. Set the highlighted options:
+
+<img src="assets/zygisknext.png" width="320">
 
 </details>
 
@@ -136,15 +141,13 @@ Under **Custom SUS Feature → Custom SUS Path**, paste all paths at once and ta
 <details>
 <summary><strong>Configure YuriKey</strong></summary>
 
-1. KernelSU-Next manager → **Modules** → **YuriKey** → tap the **WebUI button**
-2. Go to **Menu** and run these scripts in order:
-   - Set up Yuri Keybox
-   - Force stop & clear data Play Store
-   - Set up target.txt — only set necessary apps
-   - Set up security patch
-3. Go to **Menu+** and run:
-   - Clear all detection traces
-   - Set HMA-OSS configs — this imports the HMA-OSS configuration
+KernelSU-Next manager → **Modules** → **YuriKey** → **WebUI** → **Menu**. Run the highlighted scripts in order:
+
+<img src="assets/yurikey_menu.png" width="320">
+
+Then go to **Menu+** and run the highlighted scripts:
+
+<img src="assets/yurikey_menuplus.png" width="320">
 
 </details>
 
@@ -153,9 +156,9 @@ Under **Custom SUS Feature → Custom SUS Path**, paste all paths at once and ta
 <details>
 <summary><strong>Configure TrickyStore</strong></summary>
 
-1. KernelSU-Next manager → **Modules** → **TrickyStore** → tap the **WebUI button**
-2. Add banking apps and detectors to `target.txt`
-3. **Save**
+**Tricky Addon** (installed alongside TrickyStore) manages `target.txt`. Open it and ensure banking apps and detectors are checked, then tap **Save**:
+
+<img src="assets/tricky_addon.png" width="320">
 
 </details>
 
