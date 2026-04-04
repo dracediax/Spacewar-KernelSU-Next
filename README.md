@@ -73,7 +73,6 @@ Install modules **in order** through the KernelSU-Next manager, then **reboot on
 | **4** | TrickyStore | [📥 Latest release](https://github.com/5ec1cff/TrickyStore/releases) |
 | **5** | Tricky Addon | [📥 Latest release](https://github.com/KOWX712/Tricky-Addon-Update-Target-List/releases) |
 | **6** | YuriKey | [📥 Latest release](https://github.com/Yurii0307/yurikey/releases) |
-| **7** | NoHello | [📥 Latest release](https://github.com/MhmRdd/NoHello/releases) |
 
 ---
 
@@ -142,20 +141,9 @@ Under **Custom SUS Feature → Custom SUS Path**, paste all paths at once and ta
 
 ### Configure TrickyStore
 
-TrickyStore intercepts keystore2 attestation calls and provides a valid certificate chain using a keybox, enabling Google Pay and other apps requiring hardware attestation to work on a rooted device.
-
-1. Place a valid `keybox.xml` at `/data/adb/tricky_store/keybox.xml` — YuriKey handles this automatically above.
-2. `target.txt` (which apps get spoofed attestation) is managed by **Tricky Addon** and **YuriKey**. Ensure the following are listed:
-   - `com.google.android.gms!`
-   - `com.google.android.apps.walletnfcrel`
-   - `com.android.vending!`
-   - `com.google.android.gsf!`
-   - Carrier Services, SafetyCore, Key Verifier as needed
-
-> [!NOTE]
-> **DuckDetector — "TEE: Oversized Challenge" warning**
-> DuckDetector may report: `TEE: Oversized Challenge, Accepted 256B - 515B - 4096B, pruning 0/18 invalidated`.
-> This is **informational, not a failure**. TrickyStore correctly throws a keystore2 exception for challenges over 128 bytes, which is the expected spec behaviour. Google Pay works normally.
+1. KernelSU-Next manager → **Modules** → **TrickyStore** → tap the **WebUI button**
+2. Add banking apps and detectors to `target.txt`
+3. **Save**
 
 ---
 
@@ -190,6 +178,16 @@ If a detector reports a **FUSE error**, install **FuseFixer** — shared via Tel
 **⟳ Reboot.**
 
 ✅ **Done** — root is hidden and your device passes Strong Play Integrity.
+
+---
+
+### Detectors
+
+Some detectors may report:
+
+> `TEE: Oversized Challenge, Accepted 256B - 515B - 4096B, pruning 0/18 invalidated`
+
+This is **informational, not a failure**. TrickyStore correctly throws a keystore2 exception for challenges over 128 bytes, which is the expected spec behaviour. Google Pay works normally.
 
 ---
 
