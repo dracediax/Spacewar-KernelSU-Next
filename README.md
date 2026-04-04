@@ -76,7 +76,8 @@ Install modules **in order** through the KernelSU-Next manager, then **reboot on
 
 ---
 
-### Configure SUSFS
+<details>
+<summary><strong>Configure SUSFS</strong></summary>
 
 Open the **susfs4ksu** module settings (KSU manager → Modules → susfs4ksu → WebUI button) and enable:
 
@@ -102,9 +103,12 @@ Under **Custom SUS Feature → Custom SUS Path**, paste all paths at once and ta
 /sys/fs/selinux
 ```
 
+</details>
+
 ---
 
-### Activate Vector (LSPosed)
+<details>
+<summary><strong>Activate Vector (LSPosed)</strong></summary>
 
 > Install the [HMA-OSS](https://github.com/frknkrc44/HMA-OSS/releases) app first.
 
@@ -112,9 +116,12 @@ Under **Custom SUS Feature → Custom SUS Path**, paste all paths at once and ta
 2. In Vector → **Modules** → **HMA-OSS** → enable → check **System Framework**
 3. **⟳ Reboot if LSPosed asks — it may require one after enabling HMA-OSS**
 
+</details>
+
 ---
 
-### Configure ZygiskNext
+<details>
+<summary><strong>Configure ZygiskNext</strong></summary>
 
 1. KernelSU-Next manager → **Modules** → **ZygiskNext** → tap the **WebUI button**
 2. Set **Denylist policy** → **Unmount only**
@@ -122,9 +129,12 @@ Under **Custom SUS Feature → Custom SUS Path**, paste all paths at once and ta
    - ✅ Use anonymous memory
    - ✅ Use Zygisk Next Linker
 
+</details>
+
 ---
 
-### Configure YuriKey
+<details>
+<summary><strong>Configure YuriKey</strong></summary>
 
 1. KernelSU-Next manager → **Modules** → **YuriKey** → tap the **WebUI button**
 2. Go to **Menu** and run these scripts in order:
@@ -136,17 +146,23 @@ Under **Custom SUS Feature → Custom SUS Path**, paste all paths at once and ta
    - Clear all detection traces
    - Set HMA-OSS configs — this imports the HMA-OSS configuration
 
+</details>
+
 ---
 
-### Configure TrickyStore
+<details>
+<summary><strong>Configure TrickyStore</strong></summary>
 
 1. KernelSU-Next manager → **Modules** → **TrickyStore** → tap the **WebUI button**
 2. Add banking apps and detectors to `target.txt`
 3. **Save**
 
+</details>
+
 ---
 
-### Configure HMA-OSS
+<details>
+<summary><strong>Configure HMA-OSS</strong></summary>
 
 #### Initial setup
 
@@ -168,13 +184,18 @@ Under **Custom SUS Feature → Custom SUS Path**, paste all paths at once and ta
    - Enable **Work Mode: Whitelist**
    - Under **Templates** → check your whitelist template
 
+</details>
+
 ---
 
-### FuseFixer (if needed)
+<details>
+<summary><strong>FuseFixer (if needed)</strong></summary>
 
 If a detector reports a **FUSE error**, install **FuseFixer** — shared via Telegram. This is the last thing to install.
 
 **⟳ Reboot.**
+
+</details>
 
 ✅ **Done** — root is hidden and your device passes Strong Play Integrity.
 
