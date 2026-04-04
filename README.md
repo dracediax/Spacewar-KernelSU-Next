@@ -194,9 +194,11 @@ This is **informational, not a failure**. TrickyStore correctly throws a keystor
 
 If Google Pay attestation fails (`fails_attestation = 1`) after setup or after changing your keybox, do a full clean reset:
 
+**From a PC (ADB):**
+
 ```sh
 # Wipe TrickyStore's persisted keys
-su -c "rm -f /data/adb/tricky_store/persistent_keys/*"
+adb shell su -c "rm -f /data/adb/tricky_store/persistent_keys/*"
 
 # Clear Google Play Services and Google Wallet data
 adb shell pm clear com.google.android.gms
@@ -204,6 +206,20 @@ adb shell pm clear com.google.android.apps.walletnfcrel
 
 # Reboot
 adb reboot
+```
+
+**From Termux (on-device):**
+
+```sh
+# Wipe TrickyStore's persisted keys
+su -c "rm -f /data/adb/tricky_store/persistent_keys/*"
+
+# Clear Google Play Services and Google Wallet data
+su -c "pm clear com.google.android.gms"
+su -c "pm clear com.google.android.apps.walletnfcrel"
+
+# Reboot
+su -c "reboot"
 ```
 
 After reboot, **wait at least 60 seconds** for GMS to fully initialise before opening Google Pay. Then add your card fresh — do not re-add a previously cached card.
