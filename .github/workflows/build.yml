@@ -4,7 +4,7 @@ on:
   workflow_dispatch:     # Manual trigger (always builds)
     inputs:
       stock_tag:
-        description: 'Stock firmware tag (default: latest in nothing_archive), e.g. Spacewar_V3.2-260416-1140'
+        description: 'Stock firmware tag (default: latest in nothing_archive), e.g. Spacewar_V3.2-260618-1045'
         required: false
         default: ''
       kernel_commit:
@@ -70,7 +70,7 @@ jobs:
             STOCK_TAG=$(gh api repos/spike0en/nothing_archive/releases --jq '.[].tag_name' \
               | grep '^Spacewar_' | head -1)
           fi
-          [ -z "$STOCK_TAG" ] && STOCK_TAG="Spacewar_V3.2-260416-1140"
+          [ -z "$STOCK_TAG" ] && STOCK_TAG="Spacewar_V3.2-260618-1045"
           echo "stock_tag=$STOCK_TAG" >> "$GITHUB_OUTPUT"
 
           # BUILD_ID covers all three upstream sources
@@ -378,7 +378,7 @@ jobs:
         run: |
           # Reuse the tag already resolved in the check job
           LATEST_TAG="${{ needs.check.outputs.stock_tag }}"
-          [ -z "$LATEST_TAG" ] && LATEST_TAG="Spacewar_V3.2-260416-1140"
+          [ -z "$LATEST_TAG" ] && LATEST_TAG="Spacewar_V3.2-260618-1045"
           OS_VERSION=$(echo "$LATEST_TAG" | grep -oP 'V\K[0-9]+\.[0-9]+')
           [ -z "$OS_VERSION" ] && OS_VERSION="3.2"
           echo "stock_tag=$LATEST_TAG" >> "$GITHUB_OUTPUT"
@@ -396,7 +396,7 @@ jobs:
 
           curl -L "https://github.com/spike0en/nothing_archive/releases/download/${LATEST_TAG}/${LATEST_TAG}-image-boot.7z" -o image-boot.7z || true
           if [ ! -s "image-boot.7z" ]; then
-            LATEST_TAG="Spacewar_V3.2-260416-1140"
+            LATEST_TAG="Spacewar_V3.2-260618-1045"
             curl -L "https://github.com/spike0en/nothing_archive/releases/download/${LATEST_TAG}/${LATEST_TAG}-image-boot.7z" -o image-boot.7z
           fi
 

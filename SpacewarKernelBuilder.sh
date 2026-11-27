@@ -23,13 +23,16 @@ KSU_SUSFS_PATCH="configs/ksu-next-legacy-susfs.patch"
 
 # Kernel source is pinned to the merge commit matching STOCK_BOOT_TAG, so the
 # kernel and the stock ramdisk/vbmeta come from the same firmware build.
-KERNEL_COMMIT="5b724cd52034bdbd6e6d851a06cd267cafd67616"   # Spacewar-V3.2-260416-1140
+declare -A KERNEL_COMMIT_FOR=(
+    [Spacewar_V3.2-260618-1045]="1d557de4d904a76c0b679c746cc77cf9ae89b6c6"   # EOL build (branch HEAD)
+    [Spacewar_V3.2-260416-1140]="5b724cd52034bdbd6e6d851a06cd267cafd67616"
+)
 
 AK3_REPO="https://github.com/zerofrip/AnyKernel3"
 AK3_BRANCH="spacewar_nos3.0"
 
 DEFCONFIG="spacewar_defconfig"
-STOCK_BOOT_TAG="Spacewar_V3.2-260416-1140"
+STOCK_BOOT_TAG="Spacewar_V3.2-260618-1045"
 BOOT_PARTITION_SIZE=100663296
 
 # ╔══════════════════════════════════════════════════════╗
@@ -82,7 +85,7 @@ interactive_menu() {
 
     if [ "$mode" = "1" ]; then
         echo ""
-        echo "  → Building pinned defaults (NOS 3.2 · 260416-1140 · KSU-Next legacy + SUSFS patch)"
+        echo "  → Building pinned defaults (NOS 3.2 · 260618-1045 · KSU-Next legacy + SUSFS patch)"
         echo ""
         return
     fi
@@ -180,7 +183,7 @@ HELP
 done
 
 # Run interactive menu if local (not CI) and no CLI overrides were given
-if [ "$CI_MODE" = "false" ] && [ -z "${KSU_TAG:-}" ] && [ "$STOCK_BOOT_TAG" = "Spacewar_V3.2-260416-1140" ] && [ "$KERNEL_BRANCH" = "sm7325/v/mr" ]; then
+if [ "$CI_MODE" = "false" ] && [ -z "${KSU_TAG:-}" ] && [ "$STOCK_BOOT_TAG" = "Spacewar_V3.2-260618-1045" ] && [ "$KERNEL_BRANCH" = "sm7325/v/mr" ]; then
     # Check if running in a terminal
     if [ -t 0 ]; then
         interactive_menu
@@ -255,7 +258,8 @@ echo "Setting up kernel source..."
 
 if [ ! -d "$KERNEL_ROOT/.git" ]; then
     echo "   Cloning NothingOSS kernel ($KERNEL_BRANCH)..."
-    if [ -n "${KERNEL_COMMIT:-}" ] && [ "$KERNEL_BRANCH" = "sm7325/v/mr" ] && [ "$STOCK_BOOT_TAG" = "Spacewar_V3.2-260416-1140" ]; then
+    KERNEL_COMMIT="${KERNEL_COMMIT_FOR[$STOCK_BOOT_TAG]:-}"
+    if [ -n "$KERNEL_COMMIT" ] && [ "$KERNEL_BRANCH" = "sm7325/v/mr" ]; then
         echo "   Pinning kernel source to ${KERNEL_COMMIT:0:12} (matches $STOCK_BOOT_TAG)"
         git init -q "$KERNEL_ROOT"
         git -C "$KERNEL_ROOT" remote add origin "$KERNEL_REPO"
