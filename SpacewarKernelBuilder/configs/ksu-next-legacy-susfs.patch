@@ -606,7 +606,7 @@ index 92724041..b3bc8248 100644
  	}
  	default: {
 diff --git a/kernel/supercall/supercall.c b/kernel/supercall/supercall.c
-index 9c7ac7bb..498c05dc 100644
+index 9c7ac7bb..f7098efe 100644
 --- a/kernel/supercall/supercall.c
 +++ b/kernel/supercall/supercall.c
 @@ -11,6 +11,11 @@
@@ -717,3 +717,36 @@ index 9c7ac7bb..498c05dc 100644
  	// Check if this is a request to install KSU fd
  	if (magic2 == KSU_INSTALL_MAGIC2) {
  		struct ksu_install_fd_tw *tw;
+@@ -290,7 +384,13 @@ int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd,
+ 	return 0;
+ }
+ 
+-#ifdef KSU_KPROBES_HOOK
++/*
++ * With SUSFS the manual hook in kernel/reboot.c calls ksu_handle_sys_reboot()
++ * from normal syscall context. The reboot kprobe would call it a second time
++ * from atomic (preempt-disabled) context, where SUSFS commands that sleep
++ * (kern_path, allocations) trigger "scheduling while atomic" and a panic.
++ */
++#if defined(KSU_KPROBES_HOOK) && !defined(CONFIG_KSU_SUSFS)
+ static int reboot_handler_pre(struct kprobe *p, struct pt_regs *regs)
+ {
+ 	struct pt_regs *real_regs = PT_REAL_REGS(regs);
+@@ -315,7 +415,7 @@ void __init ksu_supercalls_init(void)
+ 
+ 	ksu_supercall_dump_commands();
+ 
+-#ifdef KSU_KPROBES_HOOK
++#if defined(KSU_KPROBES_HOOK) && !defined(CONFIG_KSU_SUSFS)
+ 	int rc = register_kprobe(&reboot_kp);
+ 	if (rc) {
+ 		pr_err("reboot kprobe failed: %d\n", rc);
+@@ -328,7 +428,7 @@ void __init ksu_supercalls_init(void)
+ void __exit ksu_supercalls_exit(void){
+ 	struct mount_entry *entry, *tmp;
+ 
+-#ifdef KSU_KPROBES_HOOK
++#if defined(KSU_KPROBES_HOOK) && !defined(CONFIG_KSU_SUSFS)
+ 	unregister_kprobe(&reboot_kp);
+ #endif
+ 
