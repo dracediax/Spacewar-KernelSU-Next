@@ -2,6 +2,15 @@ name: Build Kernel & Release
 
 on:
   workflow_dispatch:     # Manual trigger (always builds)
+    inputs:
+      stock_tag:
+        description: 'Stock firmware tag (default: latest in nothing_archive), e.g. Spacewar_V3.2-260416-1140'
+        required: false
+        default: ''
+      kernel_commit:
+        description: 'Full kernel commit SHA to build (default: sm7325/v/mr HEAD)'
+        required: false
+        default: ''
   schedule:
     - cron: '0 6 * * *'  # Daily at 06:00 UTC — checks for upstream changes
   push:
@@ -24,30 +33,44 @@ jobs:
       ksu_version: ${{ steps.check.outputs.ksu_version }}
       ksu_commit: ${{ steps.check.outputs.ksu_commit }}
       kernel_commit: ${{ steps.check.outputs.kernel_commit }}
+      kernel_full: ${{ steps.check.outputs.kernel_full }}
       stock_tag: ${{ steps.check.outputs.stock_tag }}
     steps:
       - name: Check for upstream changes
         id: check
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_STOCK_TAG: ${{ inputs.stock_tag }}
+          INPUT_KERNEL_COMMIT: ${{ inputs.kernel_commit }}
         run: |
-          # Get latest KSU-Next commit on legacy_susfs
-          KSU_COMMIT=$(git ls-remote https://github.com/KernelSU-Next/KernelSU-Next.git refs/heads/legacy_susfs | cut -f1 | head -c12)
+          # Latest KSU-Next commit on legacy (legacy_susfs was removed upstream;
+          # SUSFS support is applied from configs/ksu-next-legacy-susfs.patch)
+          KSU_COMMIT=$(git ls-remote https://github.com/KernelSU-Next/KernelSU-Next.git refs/heads/legacy | cut -f1 | head -c12)
           echo "ksu_commit=$KSU_COMMIT" >> "$GITHUB_OUTPUT"
 
-          # Get latest kernel commit
-          KERNEL_COMMIT=$(git ls-remote https://github.com/NothingOSS/android_kernel_msm-5.4_nothing_sm7325.git refs/heads/sm7325/v/mr | cut -f1 | head -c12)
+          # Kernel commit: manual input, else latest on sm7325/v/mr
+          if [ -n "$INPUT_KERNEL_COMMIT" ]; then
+            KERNEL_FULL="$INPUT_KERNEL_COMMIT"
+          else
+            KERNEL_FULL=$(git ls-remote https://github.com/NothingOSS/android_kernel_msm-5.4_nothing_sm7325.git refs/heads/sm7325/v/mr | cut -f1)
+          fi
+          KERNEL_COMMIT="${KERNEL_FULL:0:12}"
           echo "kernel_commit=$KERNEL_COMMIT" >> "$GITHUB_OUTPUT"
+          echo "kernel_full=$KERNEL_FULL" >> "$GITHUB_OUTPUT"
 
-          # Get latest KSU tag
-          KSU_VERSION=$(git ls-remote --tags https://github.com/KernelSU-Next/KernelSU-Next.git | grep 'legacy-susfs$' | grep -v '\^{}' | sed 's|.*refs/tags/||' | sort -rV | head -1 | sed 's/^v//' | sed 's/-legacy-susfs//')
+          # Latest KSU legacy tag (tags are now plain vX.Y.Z-legacy)
+          KSU_VERSION=$(git ls-remote --tags https://github.com/KernelSU-Next/KernelSU-Next.git | grep -- '-legacy$' | grep -v '\^{}' | sed 's|.*refs/tags/||' | sort -rV | head -1 | sed 's/^v//' | sed 's/-legacy.*//')
           [ -z "$KSU_VERSION" ] && KSU_VERSION="unknown"
           echo "ksu_version=$KSU_VERSION" >> "$GITHUB_OUTPUT"
 
-          # Get latest NothingOS stock tag from nothing_archive
-          STOCK_TAG=$(gh api repos/spike0en/nothing_archive/releases --jq '.[].tag_name' \
-            | grep '^Spacewar_' | head -1)
-          [ -z "$STOCK_TAG" ] && STOCK_TAG="Spacewar_V3.2-251219-1652"
+          # Stock firmware: manual input, else latest from nothing_archive
+          if [ -n "$INPUT_STOCK_TAG" ]; then
+            STOCK_TAG="$INPUT_STOCK_TAG"
+          else
+            STOCK_TAG=$(gh api repos/spike0en/nothing_archive/releases --jq '.[].tag_name' \
+              | grep '^Spacewar_' | head -1)
+          fi
+          [ -z "$STOCK_TAG" ] && STOCK_TAG="Spacewar_V3.2-260416-1140"
           echo "stock_tag=$STOCK_TAG" >> "$GITHUB_OUTPUT"
 
           # BUILD_ID covers all three upstream sources
@@ -168,9 +191,11 @@ jobs:
         run: |
           rm -rf SpacewarKernelBuilder/android_kernel_msm-5.4_nothing_sm7325
           mkdir -p SpacewarKernelBuilder
-          git clone --depth 1 -b sm7325/v/mr \
-            https://github.com/NothingOSS/android_kernel_msm-5.4_nothing_sm7325.git \
-            SpacewarKernelBuilder/android_kernel_msm-5.4_nothing_sm7325
+          K=SpacewarKernelBuilder/android_kernel_msm-5.4_nothing_sm7325
+          git init -q "$K"
+          git -C "$K" remote add origin https://github.com/NothingOSS/android_kernel_msm-5.4_nothing_sm7325.git
+          git -C "$K" fetch -q --depth 1 origin "${{ needs.check.outputs.kernel_full }}"
+          git -C "$K" checkout -q FETCH_HEAD
 
       - name: Clone boot image editor
         if: steps.cache-booteditor.outputs.cache-hit != 'true'
@@ -216,18 +241,18 @@ jobs:
           cp SpacewarKernelBuilder/configs/spacewar_defconfig \
             SpacewarKernelBuilder/android_kernel_msm-5.4_nothing_sm7325/arch/arm64/configs/spacewar_defconfig
 
-      - name: Setup KernelSU-Next (legacy_susfs)
+      - name: Setup KernelSU-Next (legacy + SUSFS patch)
         id: ksu
         run: |
           KERNEL_DIR="$GITHUB_WORKSPACE/SpacewarKernelBuilder/android_kernel_msm-5.4_nothing_sm7325"
           cd "$KERNEL_DIR"
 
           if [ ! -d "KernelSU-Next/.git" ]; then
-            git clone -b legacy_susfs https://github.com/KernelSU-Next/KernelSU-Next.git KernelSU-Next
+            git clone -b legacy https://github.com/KernelSU-Next/KernelSU-Next.git KernelSU-Next
           else
             cd KernelSU-Next
-            git fetch origin legacy_susfs
-            git reset --hard origin/legacy_susfs
+            git fetch origin legacy
+            git reset --hard origin/legacy
             git clean -fd
             cd ..
           fi
@@ -235,7 +260,18 @@ jobs:
           cd KernelSU-Next
           git fetch --unshallow 2>/dev/null || true
           git fetch --tags 2>/dev/null || true
-          KSU_VERSION=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' | sed 's/-legacy-susfs//')
+
+          # Apply SUSFS integration. Try latest legacy first; if the patch no longer
+          # applies, fall back to the commit it was generated against.
+          PATCH="$GITHUB_WORKSPACE/SpacewarKernelBuilder/configs/ksu-next-legacy-susfs.patch"
+          PIN=e5f5ec998de88b9fc43c62cff8f7ae12d3f4800a
+          if ! git apply --3way "$PATCH"; then
+            echo "::warning::SUSFS patch does not apply to latest legacy — using pinned $PIN"
+            git reset -q --hard
+            git checkout -q -f "$PIN"
+            git apply --3way "$PATCH"
+          fi
+          KSU_VERSION=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' | sed 's/-legacy.*//')
           [ -z "$KSU_VERSION" ] && KSU_VERSION="unknown"
           echo "ksu_version=$KSU_VERSION" >> "$GITHUB_OUTPUT"
           cd ..
@@ -342,7 +378,7 @@ jobs:
         run: |
           # Reuse the tag already resolved in the check job
           LATEST_TAG="${{ needs.check.outputs.stock_tag }}"
-          [ -z "$LATEST_TAG" ] && LATEST_TAG="Spacewar_V3.2-251219-1652"
+          [ -z "$LATEST_TAG" ] && LATEST_TAG="Spacewar_V3.2-260416-1140"
           OS_VERSION=$(echo "$LATEST_TAG" | grep -oP 'V\K[0-9]+\.[0-9]+')
           [ -z "$OS_VERSION" ] && OS_VERSION="3.2"
           echo "stock_tag=$LATEST_TAG" >> "$GITHUB_OUTPUT"
@@ -360,7 +396,7 @@ jobs:
 
           curl -L "https://github.com/spike0en/nothing_archive/releases/download/${LATEST_TAG}/${LATEST_TAG}-image-boot.7z" -o image-boot.7z || true
           if [ ! -s "image-boot.7z" ]; then
-            LATEST_TAG="Spacewar_V3.2-251219-1652"
+            LATEST_TAG="Spacewar_V3.2-260416-1140"
             curl -L "https://github.com/spike0en/nothing_archive/releases/download/${LATEST_TAG}/${LATEST_TAG}-image-boot.7z" -o image-boot.7z
           fi
 
@@ -468,7 +504,7 @@ jobs:
           body: |
             **Nothing Phone (1) — NOS ${{ steps.os_version.outputs.os_version }}**
 
-            - KernelSU-Next v${{ steps.ksu.outputs.ksu_version }} (legacy_susfs)
+            - KernelSU-Next v${{ steps.ksu.outputs.ksu_version }} (legacy branch + SUSFS patch)
             - SUSFS v2.0.0
             - Stock boot: ${{ steps.os_version.outputs.stock_tag }}
 

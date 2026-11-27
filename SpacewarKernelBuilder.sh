@@ -15,13 +15,21 @@ KERNEL_BRANCH="sm7325/v/mr"
 KERNEL_DIR="android_kernel_msm-5.4_nothing_sm7325"
 
 KSU_REPO="https://github.com/KernelSU-Next/KernelSU-Next.git"
-KSU_BRANCH="legacy_susfs"
+KSU_BRANCH="legacy"
+# KernelSU-Next dropped the legacy_susfs branch; SUSFS support is carried as a
+# patch (configs/ksu-next-legacy-susfs.patch) generated against this commit.
+KSU_PIN_COMMIT="e5f5ec998de88b9fc43c62cff8f7ae12d3f4800a"
+KSU_SUSFS_PATCH="configs/ksu-next-legacy-susfs.patch"
+
+# Kernel source is pinned to the merge commit matching STOCK_BOOT_TAG, so the
+# kernel and the stock ramdisk/vbmeta come from the same firmware build.
+KERNEL_COMMIT="5b724cd52034bdbd6e6d851a06cd267cafd67616"   # Spacewar-V3.2-260416-1140
 
 AK3_REPO="https://github.com/zerofrip/AnyKernel3"
 AK3_BRANCH="spacewar_nos3.0"
 
 DEFCONFIG="spacewar_defconfig"
-STOCK_BOOT_TAG="Spacewar_V3.2-251219-1652"
+STOCK_BOOT_TAG="Spacewar_V3.2-260416-1140"
 BOOT_PARTITION_SIZE=100663296
 
 # ╔══════════════════════════════════════════════════════╗
@@ -33,7 +41,7 @@ NOS_ANDROID=("15"  "15"  "14"  "14"  "13"  "13")
 NOS_BRANCH=("sm7325/v/mr" "sm7325/v/mr" "sm7325/u/mr" "sm7325/u/mr" "sm7325/t" "sm7325/t")
 
 declare -A FIRMWARE_BUILDS
-FIRMWARE_BUILDS["3.2"]="Spacewar_V3.2-260206-1016 Spacewar_V3.2-251231-0041 Spacewar_V3.2-251219-1652 Spacewar_V3.2-250926-1631 Spacewar_V3.2-250804-2110 Spacewar_V3.2-250701-1737 Spacewar_V3.2-250610-1104"
+FIRMWARE_BUILDS["3.2"]="Spacewar_V3.2-260618-1045 Spacewar_V3.2-260416-1140 Spacewar_V3.2-260206-1016 Spacewar_V3.2-251231-0041 Spacewar_V3.2-251219-1652 Spacewar_V3.2-250926-1631 Spacewar_V3.2-250804-2110 Spacewar_V3.2-250701-1737 Spacewar_V3.2-250610-1104"
 FIRMWARE_BUILDS["3.0"]="Spacewar_V3.0-250409-2129 Spacewar_V3.0-250303-1817 Spacewar_V3.0-250218-1552 Spacewar_V3.0-250108-1938 Spacewar_V3.0-241211-0926"
 FIRMWARE_BUILDS["2.6"]="Spacewar_U2.6-241031-1818 Spacewar_U2.6-240904-1634 Spacewar_U2.6-240705-1617"
 FIRMWARE_BUILDS["2.5"]="Spacewar_U2.5-240612-2149 Spacewar_U2.5-240419-1617 Spacewar_U2.5-240317-2245 Spacewar_U2.5-240301-1852 Spacewar_U2.5-240207-1031 Spacewar_U2.5-240119-1910 Spacewar_U2.5-240106-2238 Spacewar_U2.5-231220-0836 Spacewar_U2.5-231215-2256 Spacewar_U2.5-231212-1147 Spacewar_U2.5-231206-0153"
@@ -41,7 +49,7 @@ FIRMWARE_BUILDS["2.0"]="Spacewar_T2.0-231110-1731 Spacewar_T2.0-231006-1014 Spac
 FIRMWARE_BUILDS["1.5"]="Spacewar_T1.5-230706-1942 Spacewar_T1.5-230619-0042 Spacewar_T1.5-230428-2017 Spacewar_T1.5-230317-2039 Spacewar_T1.5-230310-1650 Spacewar_T1.5-230213-2131 Spacewar_T1.5-230114-2357"
 
 # KSU tags (populated dynamically, fallback list)
-KSU_TAGS_FALLBACK="v3.1.0-legacy-susfs v3.0.1-legacy-susfs v3.0.0-legacy-susfs"
+KSU_TAGS_FALLBACK="v3.4.0-legacy v3.2.0-legacy v3.1.0-legacy"
 
 # ╔══════════════════════════════════════════════════════╗
 # ║              INTERACTIVE MODE                         ║
@@ -74,7 +82,7 @@ interactive_menu() {
 
     if [ "$mode" = "1" ]; then
         echo ""
-        echo "  → Building latest kernel (sm7325/v/mr) + latest KSU-Next"
+        echo "  → Building pinned defaults (NOS 3.2 · 260416-1140 · KSU-Next legacy + SUSFS patch)"
         echo ""
         return
     fi
@@ -113,7 +121,7 @@ interactive_menu() {
     echo ""
     echo "  Fetching KernelSU-Next versions..."
     local -a ksu_tags
-    if ksu_remote=$(git ls-remote --tags "$KSU_REPO" 2>/dev/null | grep "legacy-susfs" | grep -v '\^{}' | sed 's|.*refs/tags/||' | sort -rV); then
+    if ksu_remote=$(git ls-remote --tags "$KSU_REPO" 2>/dev/null | grep -- "-legacy$" | grep -v '\^{}' | sed 's|.*refs/tags/||' | sort -rV); then
         read -ra ksu_tags <<< "$(echo "$ksu_remote" | head -10 | tr '\n' ' ')"
     fi
     if [ ${#ksu_tags[@]} -eq 0 ]; then
@@ -159,8 +167,8 @@ Run without options for interactive mode.
 
 Options:
   --kernel-branch BRANCH   Kernel branch (default: sm7325/v/mr)
-  --ksu-branch BRANCH      KernelSU-Next branch (default: legacy_susfs)
-  --ksu-tag TAG             KernelSU-Next version tag (e.g. v3.1.0-legacy-susfs)
+  --ksu-branch BRANCH      KernelSU-Next branch (default: legacy)
+  --ksu-tag TAG             KernelSU-Next version tag (e.g. v3.4.0-legacy)
   --stock-tag TAG           Firmware version (e.g. Spacewar_V3.2-260206-1016)
   --auto                   Skip interactive menu, use defaults
   --clean                  Clean build
@@ -172,7 +180,7 @@ HELP
 done
 
 # Run interactive menu if local (not CI) and no CLI overrides were given
-if [ "$CI_MODE" = "false" ] && [ -z "${KSU_TAG:-}" ] && [ "$STOCK_BOOT_TAG" = "Spacewar_V3.2-251219-1652" ] && [ "$KERNEL_BRANCH" = "sm7325/v/mr" ]; then
+if [ "$CI_MODE" = "false" ] && [ -z "${KSU_TAG:-}" ] && [ "$STOCK_BOOT_TAG" = "Spacewar_V3.2-260416-1140" ] && [ "$KERNEL_BRANCH" = "sm7325/v/mr" ]; then
     # Check if running in a terminal
     if [ -t 0 ]; then
         interactive_menu
@@ -247,7 +255,15 @@ echo "Setting up kernel source..."
 
 if [ ! -d "$KERNEL_ROOT/.git" ]; then
     echo "   Cloning NothingOSS kernel ($KERNEL_BRANCH)..."
-    git clone --depth 1 -b "$KERNEL_BRANCH" "$KERNEL_REPO" "$KERNEL_ROOT"
+    if [ -n "${KERNEL_COMMIT:-}" ] && [ "$KERNEL_BRANCH" = "sm7325/v/mr" ] && [ "$STOCK_BOOT_TAG" = "Spacewar_V3.2-260416-1140" ]; then
+        echo "   Pinning kernel source to ${KERNEL_COMMIT:0:12} (matches $STOCK_BOOT_TAG)"
+        git init -q "$KERNEL_ROOT"
+        git -C "$KERNEL_ROOT" remote add origin "$KERNEL_REPO"
+        git -C "$KERNEL_ROOT" fetch -q --depth 1 origin "$KERNEL_COMMIT"
+        git -C "$KERNEL_ROOT" checkout -q FETCH_HEAD
+    else
+        git clone --depth 1 -b "$KERNEL_BRANCH" "$KERNEL_REPO" "$KERNEL_ROOT"
+    fi
 fi
 
 cd "$KERNEL_ROOT"
@@ -278,10 +294,16 @@ git fetch --tags 2>/dev/null || true
 # Checkout specific tag if requested
 if [ -n "${KSU_TAG:-}" ]; then
     echo "   Checking out KSU tag: $KSU_TAG"
-    git checkout "$KSU_TAG" || die "Tag $KSU_TAG not found"
+    git checkout -q -f "$KSU_TAG" || die "Tag $KSU_TAG not found"
+else
+    git checkout -q -f "$KSU_PIN_COMMIT" || die "Pinned KSU commit $KSU_PIN_COMMIT not found"
 fi
 
-KSU_VERSION=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' | sed 's/-legacy-susfs//')
+# Apply SUSFS integration (legacy_susfs was removed upstream)
+echo "   Applying SUSFS patch to KernelSU-Next..."
+git apply --3way "$BUILD_DIR/$KSU_SUSFS_PATCH" || die "SUSFS patch does not apply to this KSU-Next revision"
+
+KSU_VERSION=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' | sed 's/-legacy.*//')
 [ -z "$KSU_VERSION" ] && KSU_VERSION="unknown"
 echo "   KSU-Next version: $KSU_VERSION"
 popd > /dev/null
@@ -422,9 +444,8 @@ echo "Kernel build complete ($KERNEL_VER)"
 echo ""
 echo "Repacking boot.img..."
 
-LATEST_TAG=$(curl -sf https://api.github.com/repos/spike0en/nothing_archive/releases \
-    | grep -oP '"tag_name": "\KSpacewar_[^"]+' | head -n 1)
-[ -z "$LATEST_TAG" ] && LATEST_TAG="$STOCK_BOOT_TAG"
+# Use the pinned stock firmware (not "latest") so boot/vbmeta match the kernel source
+LATEST_TAG="$STOCK_BOOT_TAG"
 
 DOWNLOAD_URL="https://github.com/spike0en/nothing_archive/releases/download/${LATEST_TAG}/${LATEST_TAG}-image-boot.7z"
 curl -L "$DOWNLOAD_URL" -o image-boot.7z || true

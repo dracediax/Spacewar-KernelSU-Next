@@ -16,7 +16,7 @@
   <a href="https://github.com/dracediax/Spacewar-KernelSU-Next/releases"><img src="https://img.shields.io/github/v/release/dracediax/Spacewar-KernelSU-Next?style=for-the-badge&color=blue&label=Download" alt="Download"></a>
   <img src="https://img.shields.io/badge/NOS-3.2-white?style=for-the-badge" alt="NOS 3.2">
   <img src="https://img.shields.io/badge/Kernel-5.4.289-grey?style=for-the-badge" alt="Kernel">
-  <img src="https://img.shields.io/badge/KernelSU--Next-v3.1.0-green?style=for-the-badge" alt="KernelSU-Next">
+  <img src="https://img.shields.io/badge/KernelSU--Next-v3.4.0-green?style=for-the-badge" alt="KernelSU-Next">
   <img src="https://img.shields.io/badge/SUSFS-v2.0.0-orange?style=for-the-badge" alt="SUSFS">
 </p>
 
@@ -87,17 +87,8 @@ In **Custom SUSFS Settings**, enable the highlighted toggles:
 
 <img src="assets/susfs_custom.png" width="320">
 
-Under **Custom SUS Feature → Custom SUS Path**, paste the paths and tap **Make it Sus**:
-
-<img src="assets/susfs_paths.png" width="320">
-
-```
-/proc/*/maps
-/proc/*/smaps
-/proc/*/status
-/proc/*/task/*/status
-/sys/fs/selinux
-```
+> [!NOTE]
+> **Custom SUS Path is not needed.** This kernel does not carry the VFS hooks that enforce SUS Path / SUS Mount / kstat, so adding paths there has no effect (and wildcard paths such as `/proc/*/maps` are not supported by SUSFS anyway). Skip that section.
 
 </details>
 
@@ -194,7 +185,7 @@ Then go to **Menu+** and run the highlighted scripts:
 <details>
 <summary><strong>FuseFixer (if needed)</strong></summary>
 
-If a detector reports a **FUSE error**, install **FuseFixer** — shared via Telegram. This is the last thing to install.
+If a detector reports a **FUSE error**, install [**FuseFixer**](https://github.com/5ec1cff/FuseFixer/releases) — an LSPosed module. Install it, enable it in **Vector (LSPosed) → Modules** with the recommended scope, and reboot. This is the last thing to install.
 
 **⟳ Reboot.**
 
@@ -280,8 +271,8 @@ Everything downloads automatically on first run. Output goes to `output/`.
 # Skip interactive menu, build with defaults
 ./SpacewarKernelBuilder.sh --auto
 
-# Build for a specific firmware + KSU version
-./SpacewarKernelBuilder.sh --stock-tag Spacewar_V3.2-260206-1016 --ksu-tag v3.1.0-legacy-susfs
+# Build for a specific firmware (the SUSFS patch targets the pinned KSU-Next legacy commit)
+./SpacewarKernelBuilder.sh --stock-tag Spacewar_V3.2-260206-1016
 
 # Build for NOS 2.6
 ./SpacewarKernelBuilder.sh --kernel-branch sm7325/u/mr --stock-tag Spacewar_U2.6-241031-1818
@@ -300,7 +291,7 @@ Run `./SpacewarKernelBuilder.sh --help` for all options.
 | Component | Repository | Branch |
 |---|---|---|
 | Kernel | [NothingOSS/android_kernel_msm-5.4_nothing_sm7325](https://github.com/NothingOSS/android_kernel_msm-5.4_nothing_sm7325) | `sm7325/v/mr` |
-| KernelSU-Next | [KernelSU-Next/KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next) | `legacy_susfs` |
+| KernelSU-Next | [KernelSU-Next/KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next) | `legacy` + [SUSFS patch](SpacewarKernelBuilder/configs/ksu-next-legacy-susfs.patch) |
 | SUSFS | Patched into kernel at build time | v2.0.0 |
 | AnyKernel3 | [zerofrip/AnyKernel3](https://github.com/zerofrip/AnyKernel3) | `spacewar_nos3.0` |
 | Stock boot | [spike0en/nothing_archive](https://github.com/spike0en/nothing_archive) | — |
@@ -308,9 +299,9 @@ Run `./SpacewarKernelBuilder.sh --help` for all options.
 </details>
 
 <details>
-<summary>Why <code>legacy_susfs</code>?</summary>
+<summary>Why <code>legacy</code> + a SUSFS patch?</summary>
 
-The official KernelSU-Next `dev` branch dropped kernel 5.4 support. The `legacy_susfs` branch keeps native 5.4 compatibility with SELinux and seccomp support.
+The official KernelSU-Next `dev` branch dropped kernel 5.4 support. The `legacy` branch keeps native 5.4 compatibility with SELinux and seccomp support. Upstream removed the old `legacy_susfs` branch, so the SUSFS integration it carried is kept in this repo as a patch (`SpacewarKernelBuilder/configs/ksu-next-legacy-susfs.patch`) and applied on top of `legacy` at build time.
 
 </details>
 
