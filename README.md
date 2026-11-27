@@ -57,7 +57,10 @@ fastboot flash vbmeta_b --disable-verity --disable-verification vbmeta.img
 fastboot reboot
 ```
 
-Then install [**KernelSU-Next Manager**](https://github.com/KernelSU-Next/KernelSU-Next/releases) (v3.1.0+).
+Then install **KernelSU-Next Manager v3.4.2** (`KernelSU_Next_v3.4.2_33355-release.apk` from the [releases](https://github.com/KernelSU-Next/KernelSU-Next/releases/tag/v3.4.2)). Use the normal APK, **not** the `-spoofed` one (the kernel only recognises the official signature).
+
+> [!NOTE]
+> The kernel reports KernelSU-Next UAPI **5** to match manager v3.4.2. KernelSU-Next's `legacy` branch has already moved to UAPI 6 (module preinit), but no released manager supports it yet.
 
 ---
 

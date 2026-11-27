@@ -304,8 +304,36 @@ else
 fi
 
 # Apply SUSFS integration (legacy_susfs was removed upstream)
-echo "   Applying SUSFS patch to KernelSU-Next..."
-git apply --3way "$BUILD_DIR/$KSU_SUSFS_PATCH" || die "SUSFS patch does not apply to this KSU-Next revision"
+if [ "${NO_SUSFS:-0}" = "1" ]; then
+    echo "   NO_SUSFS=1: building plain KernelSU-Next legacy (debug build, no SUSFS)"
+else
+    echo "   Applying SUSFS patch to KernelSU-Next..."
+    git apply --3way "$BUILD_DIR/$KSU_SUSFS_PATCH" || die "SUSFS patch does not apply to this KSU-Next revision"
+    if [ "${SUSFS_DEBUG_B:-0}" = "1" ]; then
+        echo "   SUSFS_DEBUG_B=1: SUSFS on, but sdcard monitor, extra setuid work and SUSFS try_umount disabled (debug)"
+        [ "${KEEP_MONITOR:-0}" = "1" ] || sed -i '/susfs_start_sdcard_monitor_fn();/d' kernel/supercall/dispatch.c
+        [ "${KEEP_EXTRA:-0}" = "1" ] || sed -i '/^    ksu_handle_extra_susfs_work();$/d' kernel/hook/setuid_hook.c
+        [ "${KEEP_TRY_UMOUNT:-0}" = "1" ] || sed -i 's/^CONFIG_KSU_SUSFS_TRY_UMOUNT=y/# CONFIG_KSU_SUSFS_TRY_UMOUNT is not set/; s/^CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT=y/# CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT is not set/' "$KERNEL_ROOT/arch/arm64/configs/spacewar_defconfig"
+        grep -c "susfs_start_sdcard_monitor_fn\|ksu_handle_extra_susfs_work();" kernel/supercall/dispatch.c kernel/hook/setuid_hook.c || true
+    fi
+fi
+
+# Fix a race in KernelSU-Next legacy: on_post_fs_data_cb (a static callback_head) can
+# be queued onto init twice, which makes init's task_work list loop on itself and
+# PID 1 spin forever (seen as a flood of "on_post_fs_data already done" and a reset
+# ~1 min after boot). The patch queues a one-shot heap callback behind an atomic guard.
+git apply "$BUILD_DIR/configs/ksu-next-legacy-taskwork-fix.patch" || die "task_work fix patch does not apply"
+echo "   Applied task_work double-queue fix"
+
+# The manager compares UAPI versions. legacy HEAD reports UAPI 6 (module preinit,
+# added after v3.4.2), but the newest released manager (v3.4.2) is UAPI 5, so it
+# would show "too low" and run in limited mode. UAPI 6 only ADDS an ioctl
+# (lookup_symbols) and a flag (preinit), so reporting 5 is safe for the v3.4.2
+# manager. Set KSU_UAPI_OVERRIDE=keep to leave the kernel's own value.
+if [ "${KSU_UAPI_OVERRIDE:-5}" != "keep" ]; then
+    sed -i "s/^#define KERNEL_SU_UAPI_VERSION .*/#define KERNEL_SU_UAPI_VERSION ${KSU_UAPI_OVERRIDE:-5}/" uapi/supercall.h
+    echo "   KernelSU-Next UAPI reported as: $(grep '^#define KERNEL_SU_UAPI_VERSION' uapi/supercall.h | awk '{print $3}')"
+fi
 
 KSU_VERSION=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' | sed 's/-legacy.*//')
 [ -z "$KSU_VERSION" ] && KSU_VERSION="unknown"
@@ -369,7 +397,7 @@ fi
 # Manual reboot hook for KSU fd installation (kprobe path is disabled when SUSFS
 # is enabled, so ksud can't obtain a driver fd → version reports as 0 → modules
 # like ReZygisk refuse to install).
-if ! grep -q "ksu_handle_sys_reboot" kernel/reboot.c; then
+if [ "${NO_SUSFS:-0}" != "1" ] && ! grep -q "ksu_handle_sys_reboot" kernel/reboot.c; then
     sed -i '/^SYSCALL_DEFINE4(reboot,/i \
 extern int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd,\n\t\t\t\t void __user **arg);' \
         kernel/reboot.c

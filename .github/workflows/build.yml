@@ -11,8 +11,6 @@ on:
         description: 'Full kernel commit SHA to build (default: sm7325/v/mr HEAD)'
         required: false
         default: ''
-  schedule:
-    - cron: '0 6 * * *'  # Daily at 06:00 UTC — checks for upstream changes
 
 jobs:
   # ══════════════════════════════════════════════════════
@@ -265,6 +263,10 @@ jobs:
             git checkout -q -f "$PIN"
             git apply --3way "$PATCH"
           fi
+          # Fix double-queued on_post_fs_data callback (init spin / reset ~1 min after boot)
+          git apply "$GITHUB_WORKSPACE/SpacewarKernelBuilder/configs/ksu-next-legacy-taskwork-fix.patch"
+          # Report UAPI 5 so the released v3.4.2 manager (UAPI 5) works in full mode
+          sed -i 's/^#define KERNEL_SU_UAPI_VERSION .*/#define KERNEL_SU_UAPI_VERSION 5/' uapi/supercall.h
           KSU_VERSION=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' | sed 's/-legacy.*//')
           [ -z "$KSU_VERSION" ] && KSU_VERSION="unknown"
           echo "ksu_version=$KSU_VERSION" >> "$GITHUB_OUTPUT"

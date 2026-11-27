@@ -1,0 +1,44 @@
+--- a/kernel/runtime/ksud_integration.c
++++ b/kernel/runtime/ksud_integration.c
+@@ -237,14 +237,20 @@
+ 	return i;
+ }
+ 
++/*
++ * One-shot, heap-allocated callback. The previous code queued a single static
++ * callback_head; queuing it twice (two zygote execs racing on first_zygote, or
++ * the same exec seen by two hooks) makes init's task_work list point at itself,
++ * and PID 1 then loops in task_work_run() calling on_post_fs_data() forever.
++ */
++static atomic_t on_post_fs_data_queued = ATOMIC_INIT(0);
++
+ static void on_post_fs_data_cbfun(struct callback_head *cb)
+ {
+ 	on_post_fs_data();
++	kfree(cb);
+ }
+ 
+-static struct callback_head on_post_fs_data_cb = { .func =
+-							on_post_fs_data_cbfun };
+-
+ static bool check_argv(struct user_arg_ptr argv, int index,
+ 		       const char *expected, char *buf, size_t buf_len)
+ {
+@@ -382,8 +388,15 @@
+ 			rcu_read_lock();
+ 			struct task_struct *init_task =
+ 				rcu_dereference(current->real_parent);
+-			if (init_task)
+-				task_work_add(init_task, &on_post_fs_data_cb, TWA_RESUME);
++			if (init_task && !atomic_xchg(&on_post_fs_data_queued, 1)) {
++				struct callback_head *cb =
++					kzalloc(sizeof(*cb), GFP_ATOMIC);
++				if (cb) {
++					cb->func = on_post_fs_data_cbfun;
++					if (task_work_add(init_task, cb, TWA_RESUME))
++						kfree(cb);
++				}
++			}
+ 			rcu_read_unlock();
+ 			first_zygote = false;
+ 			stop_execve_hook();
